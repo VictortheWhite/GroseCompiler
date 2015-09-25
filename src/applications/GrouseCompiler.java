@@ -75,6 +75,8 @@ public class GrouseCompiler extends GrouseApplication {
 			throws FileNotFoundException {
 		File file = new File(filename);
 		PrintStream out = new PrintStream(file);
+		//Print the ASM code to console
+		System.out.println(code);
 		out.print(code);
 		out.close();
 	}
