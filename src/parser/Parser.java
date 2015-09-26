@@ -251,13 +251,32 @@ public class Parser {
 		}
 		
 		ParseNode left = parseExpression4();
+		/*
 		while(nowReading.isLextant(Punctuator.MULTIPLY)) {
 			Token multiplicativeToken = nowReading;
 			readToken();
 			ParseNode right = parseExpression4();
 			
 			left = BinaryOperatorNode.withChildren(multiplicativeToken, left, right);
+		}*/
+		while(true){
+			if(nowReading.isLextant(Punctuator.MULTIPLY)) {
+				Token multiplicativeToken = nowReading;
+				readToken();
+				ParseNode right = parseExpression4();
+				
+				left = BinaryOperatorNode.withChildren(multiplicativeToken, left, right);
+			} else if(nowReading.isLextant(Punctuator.DIVIDE)) {
+				Token divideToken = nowReading;
+				readToken();
+				ParseNode right = parseExpression();
+				
+				left = BinaryOperatorNode.withChildren(divideToken, left, right);
+			} else {
+				break;
+			}
 		}
+		
 		return left;
 	}
 	private boolean startsExpression3(Token token) {

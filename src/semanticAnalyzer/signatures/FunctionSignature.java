@@ -88,7 +88,7 @@ public class FunctionSignature {
 	private static FunctionSignature addSignature = new FunctionSignature(1, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.INTEGER);
 	private static FunctionSignature multiplySignature = new FunctionSignature(1, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.INTEGER);
 	private static FunctionSignature greaterSignature = new FunctionSignature(1, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.BOOLEAN);
-
+	private static FunctionSignature divideSignature = new FunctionSignature(1, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.INTEGER);
 	
 	// the switch here is ugly compared to polymorphism.  This should perhaps be a method on Lextant.
 	public static FunctionSignature signatureOf(Lextant lextant) {
@@ -98,6 +98,7 @@ public class FunctionSignature {
 		switch(punctuator) {
 		case ADD:		return addSignature;
 		case MULTIPLY:	return multiplySignature;
+		case DIVIDE:	return divideSignature;
 		case GREATER:	return greaterSignature;
 
 		default:
