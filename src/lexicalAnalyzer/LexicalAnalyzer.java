@@ -17,6 +17,7 @@ import tokens.Token;
 import static lexicalAnalyzer.PunctuatorScanningAids.*;
 
 public class LexicalAnalyzer extends ScannerImp implements Scanner {
+	
 	public static LexicalAnalyzer make(String filename) {
 		InputHandler handler = InputHandler.fromFilename(filename);
 		PushbackCharStream charStream = PushbackCharStream.make(handler);
@@ -42,7 +43,8 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			return scanIdentifier(ch);
 		}
 		else if(isPunctuatorStart(ch)) {
-			return PunctuatorScanner.scan(ch, input);
+			//return PunctuatorScanner.scan(ch, input);
+			return ScanPunctuatorAndComments(ch, input);
 		}
 		else if(isEndOfInput(ch)) {
 			return NullToken.make(ch.getLocation());
@@ -110,6 +112,21 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	
 	
 	//////////////////////////////////////////////////////////////////////////////
+	// Judge whether there's comments starter
+	
+	private Token ScanPunctuatorAndComments(LocatedChar ch, PushbackCharStream input)
+	{
+		LocatedChar tempC = input.next();
+		if(tempC.getCharacter() == '/'){		// double '/' = comments starter
+			return eliminateComments(tempC, input);
+		} else {
+			input.pushback(tempC);
+			return PunctuatorScanner.scan(ch, input);
+		}
+	}
+	
+	
+	//////////////////////////////////////////////////////////////////////////////
 	// Punctuator lexical analysis	
 	// old method left in to show a simple scanning method.
 	// current method is the algorithm object PunctuatorScanner.java
@@ -123,6 +140,17 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			return LextantToken.make(location, "*", Punctuator.MULTIPLY);
 		case '+':
 			return LextantToken.make(location, "+", Punctuator.ADD);
+		/*case '/':{
+			LocatedChar c_temp = input.next();
+			if(c_temp.getCharacter()=='/'){
+				System.out.println("shit");
+				return eliminateComments(location,c_temp);
+			} else {
+				//push new char back
+				input.pushback(c_temp);
+				return LextantToken.make(location, "/" , Punctuator.DIVIDE);
+			}
+		}*/
 		case '>':
 			return LextantToken.make(location, ">", Punctuator.GREATER);
 		case ':':
@@ -163,6 +191,22 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.lexicalAnalyzer");
 		log.severe("Lexical error: invalid character " + ch);
 	}
-
+	
+	private Token eliminateComments(LocatedChar ch, PushbackCharStream input){
+		
+		System.out.println("comments found here");
+		LocatedChar ch1 = ch;
+		LocatedChar ch2 = input.next();
+		
+		if(ch2.getCharacter()!='\n'){	
+			while(true){
+				ch1 = ch2;
+				ch2 = input.next();
+				if((ch1.getCharacter()=='/' && ch2.getCharacter()=='/') || ch2.getCharacter() == '\n')
+					break;
+			}
+		}
+		return findNextToken();
+	}
 	
 }
