@@ -39,7 +39,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		if(ch.isDigit()) {
 			return scanNumber(ch);
 		}
-		else if(ch.isLowerCase()) {
+		else if(isIdentifierStart(ch)) {
 			return scanIdentifier(ch);
 		}
 		else if(isPunctuatorStart(ch)) {
@@ -87,13 +87,30 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	
 	//////////////////////////////////////////////////////////////////////////////
 	// Identifier and keyword lexical analysis	
-
+	
+	private boolean isIdentifierStart(LocatedChar ch) {
+		if(ch.isLowerCase())
+			return true;
+		else if(ch.isUpperCase())
+			return true;
+		else
+			return false;
+	}
+	
 	private Token scanIdentifier(LocatedChar firstChar) {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(firstChar.getCharacter());
-		appendSubsequentLowercase(buffer);
+		//appendSubsequentLowercase(buffer);
+		findWholeIdentifier(buffer);
 
 		String lexeme = buffer.toString();
+		
+		//whether identifier length exceeds 32
+		if(lexeme.length() > 32) {
+			//which char to issue error is to be considered
+			lexicalError(input.next());
+		}
+		
 		if(Keyword.isAKeyword(lexeme)) {
 			return LextantToken.make(firstChar.getLocation(), lexeme, Keyword.forLexeme(lexeme));
 		}
@@ -101,6 +118,31 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			return IdentifierToken.make(firstChar.getLocation(), lexeme);
 		}
 	}
+	
+	private void findWholeIdentifier(StringBuffer buffer) {
+		LocatedChar c = input.next();
+		while(isIdentifierChar(c)) {
+			buffer.append(c.getCharacter());
+			c = input.next();
+		}
+		input.pushback(c);
+	}
+	
+	private boolean isIdentifierChar(LocatedChar ch) {
+		if(ch.isLowerCase())
+			return true;
+		else if(ch.isUpperCase())
+			return true;
+		else if(ch.isDigit())
+			return true;
+		else if(ch.getCharacter()=='_' || ch.getCharacter()=='~')
+			return true;
+		else 
+			return false;
+	}
+	
+	@SuppressWarnings("unused")
+	// old method to find whole identifier
 	private void appendSubsequentLowercase(StringBuffer buffer) {
 		LocatedChar c = input.next();
 		while(c.isLowerCase()) {
