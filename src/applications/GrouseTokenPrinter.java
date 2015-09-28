@@ -28,7 +28,7 @@ public class GrouseTokenPrinter extends GrouseApplication {
 	 * @throws FileNotFoundException 
 	 */
 	public static void scanFile(String filename, PrintStream out) throws FileNotFoundException {
-		Scanner scanner     = LexicalAnalyzer.make(filename);
+		Scanner scanner = LexicalAnalyzer.make(filename);
 		
 		while(scanner.hasNext()) {
 			printNextToken(out, scanner);

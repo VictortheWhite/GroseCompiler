@@ -44,7 +44,7 @@ public class GrouseCompiler extends GrouseApplication {
 		
 		if(thereAreErrors()) {
 			stopProcessing(outfile);
-		} 
+		}  
 		else {
 			generateAndPrintCode(outfile, decoratedTree);
 		}

@@ -36,7 +36,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	protected Token findNextToken() {
 		LocatedChar ch = nextNonWhitespaceChar();
 		
-		if(ch.isDigit()) {
+		if(isNumberStart(ch)) {
 			return scanNumber(ch);
 		}
 		else if(isIdentifierStart(ch)) {
@@ -66,15 +66,58 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	
 	
 	//////////////////////////////////////////////////////////////////////////////
+	// NumberStart
+	private boolean isNumberStart(LocatedChar ch) {
+		return ch.isDigit() || isMinusNumberStart(ch);
+	}
+	
+	private boolean isMinusNumberStart(LocatedChar ch) {
+		if(ch.getCharacter() == '-') {
+			LocatedChar nextChar = input.next();
+			input.pushback(nextChar);
+			if(nextChar.isDigit()) 
+				return true;
+		}
+		
+		return false;
+	}
+	
 	// Integer lexical analysis	
 
+	
 	private Token scanNumber(LocatedChar firstChar) {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(firstChar.getCharacter());
-		appendSubsequentDigits(buffer);
+		//appendSubsequentDigits(buffer);
+		if(CompleteNumber(buffer))
+			//return floating type
+			System.out.println("Floating");
+		else
+			System.out.println("Integer");
 		
 		return NumberToken.make(firstChar.getLocation(), buffer.toString());
 	}
+	
+	private boolean CompleteNumber(StringBuffer buffer) {
+		appendSubsequentDigits(buffer);
+		LocatedChar c = input.next();
+		if(c.getCharacter() == '.') {
+			LocatedChar nextChar = input.next();
+			if(nextChar.isDigit()) {
+				buffer.append(c.getCharacter());
+				buffer.append(nextChar.getCharacter());
+				appendSubsequentDigits(buffer);
+				//deal with e[+/-]
+				return true;
+			} else {
+				input.pushback(nextChar);
+			}
+		} else 
+			input.pushback(c);
+		
+		return false;
+	}
+	
 	private void appendSubsequentDigits(StringBuffer buffer) {
 		LocatedChar c = input.next();
 		while(c.isDigit()) {
