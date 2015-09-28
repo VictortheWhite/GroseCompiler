@@ -8,7 +8,9 @@ import inputHandler.LocatedChar;
 import inputHandler.LocatedCharStream;
 import inputHandler.PushbackCharStream;
 import inputHandler.TextLocation;
+import tokens.FloatingToken;
 import tokens.IdentifierToken;
+import tokens.IntegerToken;
 import tokens.LextantToken;
 import tokens.NullToken;
 import tokens.NumberToken;
@@ -91,11 +93,13 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		//appendSubsequentDigits(buffer);
 		if(CompleteNumber(buffer))
 			//return floating type
-			System.out.println("Floating");
+			//System.out.println("Floating");
+			return FloatingToken.make(firstChar.getLocation(), buffer.toString());
 		else
-			System.out.println("Integer");
-		
-		return NumberToken.make(firstChar.getLocation(), buffer.toString());
+			//System.out.println("Integer");
+			return IntegerToken.make(firstChar.getLocation(), buffer.toString());
+			
+		//return NumberToken.make(firstChar.getLocation(), buffer.toString());
 	}
 	
 	private boolean CompleteNumber(StringBuffer buffer) {
