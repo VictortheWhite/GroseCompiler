@@ -281,7 +281,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	
 	private Token eliminateComments(LocatedChar ch, PushbackCharStream input){
 		
-		System.out.println("comments found here");
+		//System.out.println("comments found here");
 		LocatedChar ch1 = ch;
 		LocatedChar ch2 = input.next();
 		

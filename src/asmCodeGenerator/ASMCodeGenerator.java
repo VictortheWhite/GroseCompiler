@@ -13,6 +13,7 @@ import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
+import parseTree.nodeTypes.FloatingConstantNode;
 import parseTree.nodeTypes.IdentifierNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.NewlineNode;
@@ -146,6 +147,9 @@ public class ASMCodeGenerator {
 			else if(node.getType() == PrimitiveType.BOOLEAN) {
 				code.add(LoadC);
 			}	
+			else if(node.getType() == PrimitiveType.FLOATING) {
+				code.add(LoadF);
+			}
 			else {
 				assert false : "node " + node;
 			}
@@ -231,6 +235,7 @@ public class ASMCodeGenerator {
 			switch((PrimitiveType)type) {
 			case INTEGER:	return RunTime.INTEGER_PRINT_FORMAT;
 			case BOOLEAN:	return RunTime.BOOLEAN_PRINT_FORMAT;
+			case FLOATING:	return RunTime.FLOATING_PRINT_FORMAT;
 			default:		
 				assert false : "Type " + type + " unimplemented in ASMCodeGenerator.printFormat()";
 				return "";
@@ -254,6 +259,9 @@ public class ASMCodeGenerator {
 			}
 			if(type == PrimitiveType.BOOLEAN) {
 				return StoreC;
+			}
+			if(type == PrimitiveType.FLOATING) {
+				return StoreF;
 			}
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
 			return null;
@@ -322,7 +330,8 @@ public class ASMCodeGenerator {
 			switch(punctuator) {
 			case ADD: 	   		return Add;				// type-dependent!
 			case MULTIPLY: 		return Multiply;		// type-dependent!
-			case DIVIDE:		return Divide;
+			case DIVIDE:		return Divide;			// type-dependent!
+			
 			default:
 				assert false : "unimplemented operator in opcodeForOperator";
 			}
@@ -345,6 +354,11 @@ public class ASMCodeGenerator {
 			newValueCode(node);
 			
 			code.add(PushI, node.getValue());
+		}
+		public void visit(FloatingConstantNode node) {
+			newValueCode(node);
+			
+			code.add(PushF, node.getValue());
 		}
 	}
 
