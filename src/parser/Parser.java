@@ -232,12 +232,21 @@ public class Parser {
 		}
 		
 		ParseNode left = parseExpression3();
-		while(nowReading.isLextant(Punctuator.ADD)) {
-			Token additiveToken = nowReading;
-			readToken();
-			ParseNode right = parseExpression3();
-			
-			left = BinaryOperatorNode.withChildren(additiveToken, left, right);
+		while(true) {
+			if(nowReading.isLextant(Punctuator.ADD)) {
+				Token additiveToken = nowReading;
+				readToken();
+				ParseNode right = parseExpression3();
+				
+				left = BinaryOperatorNode.withChildren(additiveToken, left, right);
+			} else if(nowReading.isLextant(Punctuator.SUB)) {
+				Token subtractiveToken = nowReading;
+				readToken();
+				ParseNode right = parseExpression3();
+				
+				left = BinaryOperatorNode.withChildren(subtractiveToken, left, right);
+			} else 
+				break;
 		}
 		return left;
 	}
@@ -268,11 +277,11 @@ public class Parser {
 				
 				left = BinaryOperatorNode.withChildren(multiplicativeToken, left, right);
 			} else if(nowReading.isLextant(Punctuator.DIVIDE)) {
-				Token divideToken = nowReading;
+				Token divisiveToken = nowReading;
 				readToken();
 				ParseNode right = parseExpression();
 				
-				left = BinaryOperatorNode.withChildren(divideToken, left, right);
+				left = BinaryOperatorNode.withChildren(divisiveToken, left, right);
 			} else {
 				break;
 			}

@@ -333,6 +333,7 @@ public class ASMCodeGenerator {
 				case ADD: 	   		return Add;				// type-dependent!
 				case MULTIPLY: 		return Multiply;		// type-dependent!
 				case DIVIDE:		return Divide;			// type-dependent!
+				case SUB:			return Subtract;
 			
 				default:
 					assert false : "unimplemented operator in opcodeForOperator";
@@ -342,6 +343,7 @@ public class ASMCodeGenerator {
 				case ADD:			return FAdd;
 				case MULTIPLY: 		return FMultiply;
 				case DIVIDE:		return FDivide;
+				case SUB:			return FSubtract;
 				
 				default:
 					assert false : "unimplemented operator in opcodeForOperator for floating type";
