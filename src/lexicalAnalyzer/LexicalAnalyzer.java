@@ -89,15 +89,10 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(firstChar.getCharacter());
 		//appendSubsequentDigits(buffer);
-		if(CompleteNumber(buffer))
-			//return floating type
-			//System.out.println("Floating");
+		if(CompleteNumber(buffer))	//true for floating, false for integer
 			return FloatingToken.make(firstChar.getLocation(), buffer.toString());
 		else
-			//System.out.println("Integer");
-			return IntegerToken.make(firstChar.getLocation(), buffer.toString());
-			
-		//return NumberToken.make(firstChar.getLocation(), buffer.toString());
+			return IntegerToken.make(firstChar.getLocation(), buffer.toString());			
 	}
 	
 	private boolean CompleteNumber(StringBuffer buffer) {
@@ -109,13 +104,14 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 				buffer.append(c.getCharacter());
 				buffer.append(nextChar.getCharacter());
 				appendSubsequentDigits(buffer);
-				//deal with e[+/-]
+				scanExponentOfFloating(buffer);
 				return true;
 			} else {
 				input.pushback(nextChar);
 			}
-		} else 
-			input.pushback(c);
+		}
+		
+		input.pushback(c);
 		
 		return false;
 	}
@@ -126,6 +122,22 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			buffer.append(c.getCharacter());
 			c = input.next();
 		}
+		input.pushback(c);
+	}
+	
+	private void scanExponentOfFloating(StringBuffer buffer) {
+		LocatedChar c = input.next();
+		if(c.getCharacter()=='e') {
+			LocatedChar nextChar = input.next();
+			if(isNumberStart(nextChar)) {
+				buffer.append(c.getCharacter());
+				buffer.append(nextChar.getCharacter());
+				appendSubsequentDigits(buffer);
+				return;
+			} else 
+				input.pushback(nextChar);
+		}
+		
 		input.pushback(c);
 	}
 	

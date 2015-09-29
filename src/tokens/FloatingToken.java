@@ -17,6 +17,8 @@ public class FloatingToken extends TokenImp {
 	
 	public static FloatingToken make(TextLocation location, String lexeme) {
 		FloatingToken result = new FloatingToken(location, lexeme);
+		//System.out.println(lexeme);
+		//System.out.println("shitshitshitshit");
 		result.setValue(Double.parseDouble(lexeme));
 		return result;
 	}
