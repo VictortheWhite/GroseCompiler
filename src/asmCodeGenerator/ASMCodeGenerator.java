@@ -321,19 +321,33 @@ public class ASMCodeGenerator {
 			code.append(arg1);
 			code.append(arg2);
 			
-			ASMOpcode opcode = opcodeForOperator(node.getOperator());
+			ASMOpcode opcode = opcodeForOperator(node.getOperator(),node.getType());
 			code.add(opcode);							// type-dependent!
 		}
-		private ASMOpcode opcodeForOperator(Lextant lextant) {
+		private ASMOpcode opcodeForOperator(Lextant lextant, Type nodeType) {
 			assert(lextant instanceof Punctuator);
+			assert(nodeType instanceof Type);
 			Punctuator punctuator = (Punctuator)lextant;
-			switch(punctuator) {
-			case ADD: 	   		return Add;				// type-dependent!
-			case MULTIPLY: 		return Multiply;		// type-dependent!
-			case DIVIDE:		return Divide;			// type-dependent!
+			if(nodeType == PrimitiveType.INTEGER) {
+				switch(punctuator) {
+				case ADD: 	   		return Add;				// type-dependent!
+				case MULTIPLY: 		return Multiply;		// type-dependent!
+				case DIVIDE:		return Divide;			// type-dependent!
 			
-			default:
-				assert false : "unimplemented operator in opcodeForOperator";
+				default:
+					assert false : "unimplemented operator in opcodeForOperator";
+				}
+			} else if(nodeType == PrimitiveType.FLOATING) {
+				switch(punctuator) {
+				case ADD:			return FAdd;
+				case MULTIPLY: 		return FMultiply;
+				case DIVIDE:		return FDivide;
+				
+				default:
+					assert false : "unimplemented operator in opcodeForOperator for floating type";
+				}
+			} else {
+				assert false: "unimplemented type of node";
 			}
 			return null;
 		}
