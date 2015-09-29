@@ -307,9 +307,9 @@ public class Parser {
 		if(startsFloatingNumber(nowReading)) {
 			return parseFloatingNumber();
 		}
-		if(startsIntNumber(nowReading)) {
+		/*if(startsIntNumber(nowReading)) {
 			return parseFloatingNumber();
-		}
+		}*/
 		if(startsIdentifier(nowReading)) {
 			return parseIdentifier();
 		}

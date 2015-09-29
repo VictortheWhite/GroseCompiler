@@ -2,7 +2,6 @@ package lexicalAnalyzer;
 
 
 import logging.GrouseLogger;
-
 import inputHandler.InputHandler;
 import inputHandler.LocatedChar;
 import inputHandler.LocatedCharStream;
@@ -13,7 +12,6 @@ import tokens.IdentifierToken;
 import tokens.IntegerToken;
 import tokens.LextantToken;
 import tokens.NullToken;
-import tokens.NumberToken;
 import tokens.Token;
 
 import static lexicalAnalyzer.PunctuatorScanningAids.*;
