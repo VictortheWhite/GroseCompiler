@@ -40,7 +40,7 @@ public class RunTime {
 		frag.add(DLabel, INTEGER_PRINT_FORMAT);
 		frag.add(DataS, "%d");
 		frag.add(DLabel, FLOATING_PRINT_FORMAT);
-		frag.add(DataS, "%f");
+		frag.add(DataS, "%g");
 		frag.add(DLabel, BOOLEAN_PRINT_FORMAT);
 		frag.add(DataS, "%s");
 		frag.add(DLabel, NEWLINE_PRINT_FORMAT);

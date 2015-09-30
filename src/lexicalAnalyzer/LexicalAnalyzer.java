@@ -238,18 +238,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		case '*':
 			return LextantToken.make(location, "*", Punctuator.MULTIPLY);
 		case '+':
-			return LextantToken.make(location, "+", Punctuator.ADD);
-		/*case '/':{
-			LocatedChar c_temp = input.next();
-			if(c_temp.getCharacter()=='/'){
-				System.out.println("shit");
-				return eliminateComments(location,c_temp);
-			} else {
-				//push new char back
-				input.pushback(c_temp);
-				return LextantToken.make(location, "/" , Punctuator.DIVIDE);
-			}
-		}*/
+			return LextantToken.make(location, "+", Punctuator.ADD); 
 		case '>':
 			return LextantToken.make(location, ">", Punctuator.GREATER);
 		case ':':
