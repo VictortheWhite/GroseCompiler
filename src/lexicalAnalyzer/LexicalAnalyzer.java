@@ -165,7 +165,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		//whether identifier length exceeds 32
 		if(lexeme.length() > 32) {
 			//which char to issue error is to be considered
-			lexicalError(input.next());
+			lexicalError_identifierTooLong(lexeme);
 		}
 		
 		if(Keyword.isAKeyword(lexeme)) {
@@ -278,6 +278,11 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	private void lexicalError(LocatedChar ch) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.lexicalAnalyzer");
 		log.severe("Lexical error: invalid character " + ch);
+	}
+	
+	private void lexicalError_identifierTooLong(String identifier) {
+		GrouseLogger log = GrouseLogger.getLogger("compiler.lexicalAnalyzer");
+		log.severe("Lexical error: identifier too long : " + identifier);
 	}
 	
 	private Token eliminateComments(LocatedChar ch, PushbackCharStream input){

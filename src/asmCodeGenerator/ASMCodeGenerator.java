@@ -273,18 +273,27 @@ public class ASMCodeGenerator {
 		public void visitLeave(BinaryOperatorNode node) {
 			Lextant operator = node.getOperator();
 
-			if(operator == Punctuator.GREATER) {
+			if(isComparisonOperator(operator)) {
 				visitComparisonOperatorNode(node, operator);
 			}
 			else {
 				visitNormalBinaryOperatorNode(node);
 			}
 		}
+		private boolean isComparisonOperator(Lextant operator) {
+			return operator==Punctuator.GREATER || operator==Punctuator.LESS || operator==Punctuator.GREATEROFEQUAL 
+					|| operator==Punctuator.LESSOFEQUAL || operator==Punctuator.EQUAL || operator==Punctuator.NOTEQUAL;
+		}
+		
+		//comparison operator
 		private void visitComparisonOperatorNode(BinaryOperatorNode node,
 				Lextant operator) {
-
+			
+			
+			
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
 			ASMCodeFragment arg2 = removeValueCode(node.child(1));
+			Type childType = node.child(0).getType();
 
 			String startLabel = labeller.newLabel("-compare-arg1-", "");
 			String arg2Label  = labeller.newLabelSameNumber("-compare-arg2-", "");
@@ -299,9 +308,14 @@ public class ASMCodeGenerator {
 			code.add(Label, arg2Label);
 			code.append(arg2);
 			code.add(Label, subLabel);
-			code.add(Subtract);
 			
-			code.add(JumpPos, trueLabel);
+			if(childType == PrimitiveType.INTEGER)
+				code.add(Subtract);
+			else if(childType == PrimitiveType.FLOATING)
+				code.add(FSubtract);
+			
+//			code.add(JumpPos, trueLabel);
+			addJumpInstruction(childType, operator, code ,trueLabel, falseLabel);
 			code.add(Jump, falseLabel);
 
 			code.add(Label, trueLabel);
@@ -313,6 +327,81 @@ public class ASMCodeGenerator {
 			code.add(Label, joinLabel);
 
 		}
+		//comparasion aids: returns the jump instruction needed
+		private void addJumpInstruction(Type childType, Lextant operator, ASMCodeFragment code, String trueLabel, String falseLabel) {
+			
+			if(operator == Punctuator.GREATEROFEQUAL) {
+				code.add(ASMOpcode.Duplicate);
+				String compareGreater = labeller.newLabelSameNumber("-compare-greater-for-GREATEREQUAL-Compare-", "");
+				if(childType == PrimitiveType.INTEGER) {
+					code.add(JumpPos, compareGreater);
+					code.add(Pop);
+					code.add(Jump, falseLabel);
+
+					code.add(Label,compareGreater);
+					code.add(ASMOpcode.JumpFalse, trueLabel);	//jump when arg1 == arg2	
+				} else if(childType == PrimitiveType.FLOATING) {
+					
+						code.add(JumpFPos, compareGreater);
+						code.add(Pop);
+						code.add(Jump, falseLabel);
+
+						code.add(Label,compareGreater);
+						code.add(ASMOpcode.JumpFZero, trueLabel);	//jump when arg1 == arg2	
+				}
+				
+			} else if(operator == Punctuator.LESSOFEQUAL) {
+				code.add(ASMOpcode.Duplicate);
+				String compareEqual = labeller.newLabelSameNumber("-compare-equal-for-LESSEQUAL-Compare-", "");
+				String popDuplicate = labeller.newLabelSameNumber("compare-pop-duplicate-for-LESSEQUAL", "");
+				if(childType == PrimitiveType.INTEGER) {
+					code.add(JumpNeg, popDuplicate);
+
+					code.add(Label,compareEqual);
+					code.add(ASMOpcode.JumpFalse, trueLabel);	//jump when arg1 == arg2	
+					code.add(Label, popDuplicate);
+					code.add(Pop);
+					code.add(Jump,trueLabel);
+				} else if(childType == PrimitiveType.FLOATING) {
+					
+					code.add(JumpFNeg, popDuplicate);
+
+					code.add(Label,compareEqual);
+					code.add(ASMOpcode.JumpFZero, trueLabel);	//jump when arg1 == arg2	
+					code.add(Label, popDuplicate);
+					code.add(Pop);
+					code.add(Jump,trueLabel);	
+				}
+				
+				
+			} else if(operator == Punctuator.NOTEQUAL && childType == PrimitiveType.FLOATING) {
+				code.add(ASMOpcode.JumpFZero, falseLabel);
+				code.add(ASMOpcode.Jump, trueLabel);
+			} else {
+				ASMOpcode Opcode = null;
+				if(childType == PrimitiveType.INTEGER) {
+					if(operator == Punctuator.GREATER)
+						Opcode = ASMOpcode.JumpPos;
+					else if(operator == Punctuator.LESS)
+						Opcode = ASMOpcode.JumpNeg;
+					else if(operator == Punctuator.EQUAL)
+						Opcode = ASMOpcode.JumpFalse;
+					else if(operator == Punctuator.NOTEQUAL)
+						Opcode = ASMOpcode.JumpTrue;
+				} else if (childType == PrimitiveType.FLOATING) {
+					if(operator == Punctuator.GREATER)
+						Opcode = ASMOpcode.JumpFPos;
+					else if(operator == Punctuator.LESS)
+						Opcode = ASMOpcode.JumpFNeg;
+					else if(operator == Punctuator.EQUAL)
+						Opcode = ASMOpcode.JumpFZero;
+				} 
+				code.add(Opcode, trueLabel);
+				
+			}
+		}
+		
+		// nomal binary operator
 		private void visitNormalBinaryOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
