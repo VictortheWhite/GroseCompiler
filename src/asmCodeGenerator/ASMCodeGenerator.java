@@ -316,8 +316,8 @@ public class ASMCodeGenerator {
 			
 //			code.add(JumpPos, trueLabel);
 			addJumpInstruction(childType, operator, code ,trueLabel, falseLabel);
+			
 			code.add(Jump, falseLabel);
-
 			code.add(Label, trueLabel);
 			code.add(PushI, 1);
 			code.add(Jump, joinLabel);
