@@ -315,7 +315,7 @@ public class ASMCodeGenerator {
 				code.add(FSubtract);
 			
 //			code.add(JumpPos, trueLabel);
-			addJumpInstruction(childType, operator, code ,trueLabel, falseLabel);
+			addJumpInstruction(childType, operator, trueLabel, falseLabel);
 			
 			code.add(Jump, falseLabel);
 			code.add(Label, trueLabel);
@@ -328,7 +328,7 @@ public class ASMCodeGenerator {
 
 		}
 		//comparasion aids: returns the jump instruction needed
-		private void addJumpInstruction(Type childType, Lextant operator, ASMCodeFragment code, String trueLabel, String falseLabel) {
+		private void addJumpInstruction(Type childType, Lextant operator, String trueLabel, String falseLabel) {
 			
 			if(operator == Punctuator.GREATEROFEQUAL) {
 				code.add(ASMOpcode.Duplicate);
@@ -411,6 +411,7 @@ public class ASMCodeGenerator {
 			code.append(arg2);
 			
 			ASMOpcode opcode = opcodeForOperator(node.getOperator(),node.getType());
+			AddRuntimeErrorForZeroDivision(opcode);
 			code.add(opcode);							// type-dependent!
 		}
 		private ASMOpcode opcodeForOperator(Lextant lextant, Type nodeType) {
@@ -443,6 +444,17 @@ public class ASMCodeGenerator {
 			return null;
 		}
 
+		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
+			if(opcode == ASMOpcode.Divide) {
+				code.add(Duplicate);
+				code.add(JumpFalse,RunTime.INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR );
+			} else if(opcode == ASMOpcode.FDivide) {
+				code.add(Duplicate);
+				code.add(JumpFZero,RunTime.FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR);
+			} else
+				return;
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
 		public void visit(BooleanConstantNode node) {
