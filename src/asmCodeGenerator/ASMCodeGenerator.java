@@ -325,14 +325,11 @@ public class ASMCodeGenerator {
 			code.append(arg2);
 			code.add(Label, subLabel);
 			
-			if(childType == PrimitiveType.INTEGER)
-				code.add(Subtract);
-			else if(childType == PrimitiveType.FLOATING)
-				code.add(FSubtract);
+
 			
 //			code.add(JumpPos, trueLabel);
-			addJumpInstruction(childType, operator, trueLabel, falseLabel);
-			code.add(Jump, falseLabel);
+			//OldAddJumpInstruction(childType, operator, trueLabel, falseLabel);
+			addSubstractionAndJumpInstruction(childType, operator, trueLabel, falseLabel);
 			
 			code.add(Label, trueLabel);
 			code.add(PushI, 1);
@@ -344,7 +341,71 @@ public class ASMCodeGenerator {
 
 		}
 		//comparasion aids: returns the jump instruction needed
-		private void addJumpInstruction(Type childType, Lextant operator, String trueLabel, String falseLabel) {
+		private void addSubstractionAndJumpInstruction(Type childType, Lextant operator, String trueLabel, String falseLabel) {
+		
+			if(childType == PrimitiveType.INTEGER || childType == PrimitiveType.CHARACTER) {
+				code.add(Subtract);
+
+				if(operator == Punctuator.LESS) {
+					code.add(JumpNeg, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.GREATER) {
+					code.add(JumpPos, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.EQUAL) {
+					code.add(JumpFalse, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.NOTEQUAL) {
+					code.add(JumpTrue, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.LESSOFEQUAL) {
+					code.add(JumpPos, falseLabel);
+					code.add(Jump, trueLabel);
+				} else if(operator == Punctuator.GREATEROFEQUAL) {
+					code.add(JumpNeg, falseLabel);
+					code.add(Jump, trueLabel);
+				}
+			} else if(childType == PrimitiveType.FLOATING) {
+				code.add(FSubtract);
+				
+				if(operator == Punctuator.LESS) {
+					code.add(JumpFNeg, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.GREATER) {
+					code.add(JumpFPos, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.EQUAL) {
+					code.add(JumpFZero, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.NOTEQUAL) {
+					code.add(JumpFZero, falseLabel);
+					code.add(Jump, trueLabel);
+				} else if(operator == Punctuator.LESSOFEQUAL) {
+					code.add(JumpFPos, falseLabel);
+					code.add(Jump, trueLabel);
+				} else if(operator == Punctuator.GREATEROFEQUAL) {
+					code.add(JumpFNeg, falseLabel);
+					code.add(Jump, trueLabel);
+				}
+			} else if(childType == PrimitiveType.BOOLEAN || childType == PrimitiveType.STRING) {
+				code.add(Subtract);
+				if(operator == Punctuator.EQUAL) {
+					code.add(JumpFalse, trueLabel);
+					code.add(Jump, falseLabel);
+				} else if(operator == Punctuator.NOTEQUAL) {
+					code.add(JumpTrue, trueLabel);
+					code.add(Jump, falseLabel);
+				}
+			}
+
+		}
+		@SuppressWarnings("unused")
+		private void OldAddJumpInstruction(Type childType, Lextant operator, String trueLabel, String falseLabel) {
+			
+			if(childType == PrimitiveType.INTEGER || childType == PrimitiveType.CHARACTER || childType == PrimitiveType.BOOLEAN)
+				code.add(Subtract);
+			else if(childType == PrimitiveType.FLOATING)
+				code.add(FSubtract);
 			
 			if(operator == Punctuator.GREATEROFEQUAL) {
 				code.add(ASMOpcode.Duplicate);
@@ -415,6 +476,8 @@ public class ASMCodeGenerator {
 				code.add(Opcode, trueLabel);
 				
 			}
+			code.add(Jump, falseLabel);
+
 		}
 		
 		// nomal binary operator
