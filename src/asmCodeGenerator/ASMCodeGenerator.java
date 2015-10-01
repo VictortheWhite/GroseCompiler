@@ -499,7 +499,12 @@ public class ASMCodeGenerator {
 			code.add(PushI, node.getValue());
 		}
 		public void visit(StringConstantNode node) {
+			newValueCode(node);
 			
+			String stringLabel = labeller.newLabel("$string-constant", "");
+			code.add(DLabel, stringLabel);
+			code.add(DataS, node.getValue());
+			code.add(PushD, stringLabel);
 		}
 	}
 
