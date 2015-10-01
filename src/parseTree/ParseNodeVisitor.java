@@ -8,6 +8,8 @@ import parseTree.nodeTypes.ErrorNode;
 import parseTree.nodeTypes.IdentifierNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.FloatingConstantNode;
+import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.StringConstantNode;
 import parseTree.nodeTypes.NewlineNode;
 import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
@@ -43,6 +45,8 @@ public interface ParseNodeVisitor {
 	void visit(IdentifierNode node);
 	void visit(IntegerConstantNode node);
 	void visit(FloatingConstantNode node);
+	void visit(CharacterConstantNode node);
+	void visit(StringConstantNode node);
 	void visit(NewlineNode node);
 	void visit(SeparatorNode node);
 
@@ -111,6 +115,12 @@ public interface ParseNodeVisitor {
 			defaultVisitForLeaf(node);
 		}
 		public void visit(FloatingConstantNode node) {
+			defaultVisitForLeaf(node);
+		}
+		public void visit(CharacterConstantNode node) {
+			defaultVisitForLeaf(node);
+		}
+		public void visit(StringConstantNode node) {
 			defaultVisitForLeaf(node);
 		}
 		public void visit(NewlineNode node) {

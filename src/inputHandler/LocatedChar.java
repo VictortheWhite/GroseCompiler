@@ -62,4 +62,7 @@ public class LocatedChar {
 	public boolean isWhitespace() {
 		return Character.isWhitespace(character);
 	}
+	public boolean isPrintableChar() {
+		return this.character >=32 && this.character <=126;
+	}
 }

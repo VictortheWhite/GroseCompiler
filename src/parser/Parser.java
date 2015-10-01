@@ -4,18 +4,7 @@ import java.util.Arrays;
 
 import logging.GrouseLogger;
 import parseTree.*;
-import parseTree.nodeTypes.BinaryOperatorNode;
-import parseTree.nodeTypes.BooleanConstantNode;
-import parseTree.nodeTypes.MainBlockNode;
-import parseTree.nodeTypes.DeclarationNode;
-import parseTree.nodeTypes.ErrorNode;
-import parseTree.nodeTypes.IdentifierNode;
-import parseTree.nodeTypes.IntegerConstantNode;
-import parseTree.nodeTypes.FloatingConstantNode;
-import parseTree.nodeTypes.NewlineNode;
-import parseTree.nodeTypes.PrintStatementNode;
-import parseTree.nodeTypes.ProgramNode;
-import parseTree.nodeTypes.SeparatorNode;
+import parseTree.nodeTypes.*;
 import tokens.*;
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
@@ -191,7 +180,7 @@ public class Parser {
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
 	// expr4 -> literal
-	// literal -> intNumber | identifier | booleanConstant
+	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr1
 	private ParseNode parseExpression() {		
@@ -329,11 +318,18 @@ public class Parser {
 		if(startsBooleanConstant(nowReading)) {
 			return parseBooleanConstant();
 		}
+		if(startsCharacterConstant(nowReading)) {
+			return parseCharacterConstant();
+		}
+		if(startsStringConstant(nowReading)) {
+			return parseStringConstant();
+		}
 		assert false : "bad token " + nowReading + " in parseLiteral()";
 		return null;
 	}
 	private boolean startsLiteral(Token token) {
-		return startsIntNumber(token) || startsFloatingNumber(token) || startsIdentifier(token) || startsBooleanConstant(token);
+		return startsIntNumber(token) || startsFloatingNumber(token) || startsIdentifier(token) || startsBooleanConstant(token)
+				|| startsCharacterConstant(token) || startsStringConstant(token);
 	}
 
 	// number (terminal)
@@ -383,7 +379,33 @@ public class Parser {
 	private boolean startsBooleanConstant(Token token) {
 		return token.isLextant(Keyword.TRUE, Keyword.FALSE);
 	}
-
+	
+	// Character and String (terminal)
+	private ParseNode parseCharacterConstant() {
+		if(!startsCharacterConstant(nowReading)) {
+			return syntaxErrorNode("character constant");
+		}
+		readToken();
+		return new CharacterConstantNode(previouslyRead);
+	}
+	
+	private ParseNode parseStringConstant() {
+		if(!startsStringConstant(nowReading)) {
+			return syntaxErrorNode("string constant");
+		}
+		readToken();
+		return new StringConstantNode(previouslyRead);
+	}
+	
+	private boolean startsCharacterConstant(Token token) {
+		return token instanceof CharacterToken;
+	}
+	
+	private boolean startsStringConstant(Token token) {
+		return token instanceof StringToken;
+	}
+	
+	//-------------------------------------------
 	private void readToken() {
 		previouslyRead = nowReading;
 		nowReading = scanner.next();

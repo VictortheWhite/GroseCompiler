@@ -7,11 +7,13 @@ import inputHandler.LocatedChar;
 import inputHandler.LocatedCharStream;
 import inputHandler.PushbackCharStream;
 import inputHandler.TextLocation;
+import tokens.CharacterToken;
 import tokens.FloatingToken;
 import tokens.IdentifierToken;
 import tokens.IntegerToken;
 import tokens.LextantToken;
 import tokens.NullToken;
+import tokens.StringToken;
 import tokens.Token;
 
 import static lexicalAnalyzer.PunctuatorScanningAids.*;
@@ -43,8 +45,13 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			return scanIdentifier(ch);
 		}
 		else if(isPunctuatorStart(ch)) {
-			//return PunctuatorScanner.scan(ch, input);
-			return ScanPunctuatorAndComments(ch, input);
+			return scanPunctuatorAndComments(ch);
+		}
+		else if(isCharacterConstantStart(ch)) {
+			return scanCharacterConstant(ch);
+		}
+		else if(isStringConstantStart(ch)) {
+			return scanStringConstant(ch);
 		}
 		else if(isEndOfInput(ch)) {
 			return NullToken.make(ch.getLocation());
@@ -55,6 +62,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		}
 	}
 
+   
 
 	private LocatedChar nextNonWhitespaceChar() {
 		LocatedChar ch = input.next();
@@ -65,26 +73,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	}
 	
 	
-	//////////////////////////////////////////////////////////////////////////////
-	// NumberStart
-	private boolean isNumberStart(LocatedChar ch) {
-		return ch.isDigit() || isMinusNumberStart(ch);
-	}
-	
-	private boolean isMinusNumberStart(LocatedChar ch) {
-		if(ch.getCharacter() == '-') {
-			LocatedChar nextChar = input.next();
-			input.pushback(nextChar);
-			if(nextChar.isDigit()) 
-				return true;
-		}
-		
-		return false;
-	}
-	
 	// Integer lexical analysis	
-
-	
 	private Token scanNumber(LocatedChar firstChar) {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(firstChar.getCharacter());
@@ -145,15 +134,6 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	//////////////////////////////////////////////////////////////////////////////
 	// Identifier and keyword lexical analysis	
 	
-	private boolean isIdentifierStart(LocatedChar ch) {
-		if(ch.isLowerCase())
-			return true;
-		else if(ch.isUpperCase())
-			return true;
-		else
-			return false;
-	}
-	
 	private Token scanIdentifier(LocatedChar firstChar) {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(firstChar.getCharacter());
@@ -165,7 +145,8 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		//whether identifier length exceeds 32
 		if(lexeme.length() > 32) {
 			//which char to issue error is to be considered
-			lexicalError_identifierTooLong(lexeme);
+			lexicalError_identifierTooLong(lexeme, firstChar);
+			return findNextToken();
 		}
 		
 		if(Keyword.isAKeyword(lexeme)) {
@@ -208,12 +189,14 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		}
 		input.pushback(c);
 	}
-	
+
 	
 	//////////////////////////////////////////////////////////////////////////////
-	// Judge whether there's comments starter
-	
-	private Token ScanPunctuatorAndComments(LocatedChar ch, PushbackCharStream input)
+	// Punctuator lexical analysis	
+	// old method left in to show a simple scanning method.
+	// current method is the algorithm object PunctuatorScanner.java
+	// judge whether there exists comments at the same time
+	private Token scanPunctuatorAndComments(LocatedChar ch)
 	{
 		LocatedChar tempC = input.next();
 		if(tempC.getCharacter() == '/'){		// double '/' = comments starter
@@ -223,13 +206,6 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			return PunctuatorScanner.scan(ch, input);
 		}
 	}
-	
-	
-	//////////////////////////////////////////////////////////////////////////////
-	// Punctuator lexical analysis	
-	// old method left in to show a simple scanning method.
-	// current method is the algorithm object PunctuatorScanner.java
-
 	@SuppressWarnings("unused")
 	private Token oldScanPunctuator(LocatedChar ch) {
 		TextLocation location = ch.getLocation();
@@ -257,16 +233,79 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////////////
+	//Character Constant lexical analysis
+	
+	private Token scanCharacterConstant(LocatedChar ch) {
+		LocatedChar nextChar = input.next();
+		if(!nextChar.isPrintableChar()) {
+			input.pushback(nextChar);
+			issueLexicalError("Lexical Error: unvalid char " + nextChar);
+		}
+		LocatedChar finishQuote = input.next();
+		if(finishQuote.getCharacter()!='\'') {
+			input.pushback(nextChar);
+			input.pushback(finishQuote);
+			issueLexicalError("Lexical Error: unclosed single quote" + finishQuote);
+			return findNextToken();
+		}
+		return CharacterToken.make(ch.getLocation(), nextChar.getCharacter().toString());
+	}
+	//////////////////////////////////////////////////////////////////////////////
+	//String Constant lexical analysis
+	
+	private Token scanStringConstant(LocatedChar ch) {
+		StringBuffer buffer = new StringBuffer();
+		LocatedChar nextChar = input.next();
+
+		while(nextChar.isPrintableChar()) {
+			buffer.append(nextChar.getCharacter());
+			nextChar = input.next();
+			if(nextChar.getCharacter() == '\"') {
+				return StringToken.make(ch.getLocation(), buffer.toString());
+			}
+		}	
+			issueLexicalError("Lexical Error: unclosed double quotes " + ch);
+			return findNextToken();		
+	}
 	
 
+	
+	/*----------------------------------------------------------------------------------------*/
 	//////////////////////////////////////////////////////////////////////////////
 	// Character-classification routines specific to Grouse scanning.	
 
+	private boolean isNumberStart(LocatedChar ch) {
+		return ch.isDigit() || isMinusNumberStart(ch);
+	}
+	private boolean isMinusNumberStart(LocatedChar ch) {
+		if(ch.getCharacter() == '-') {
+			LocatedChar nextChar = input.next();
+			input.pushback(nextChar);
+			if(nextChar.isDigit()) 
+				return true;
+		}
+		
+		return false;
+	}	
+	private boolean isIdentifierStart(LocatedChar ch) {
+		if(ch.isLowerCase())
+			return true;
+		else if(ch.isUpperCase())
+			return true;
+		else
+			return false;
+	}
 	private boolean isPunctuatorStart(LocatedChar lc) {
 		char c = lc.getCharacter();
 		return isPunctuatorStartingCharacter(c);
 	}
-
+	private boolean isCharacterConstantStart(LocatedChar ch) {
+		return ch.getCharacter() == '\'';
+				}
+	private boolean isStringConstantStart(LocatedChar ch) {
+		return ch.getCharacter() == '\"';
+	}
 	private boolean isEndOfInput(LocatedChar lc) {
 		return lc == LocatedCharStream.FLAG_END_OF_INPUT;
 	}
@@ -280,11 +319,17 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		log.severe("Lexical error: invalid character " + ch);
 	}
 	
-	private void lexicalError_identifierTooLong(String identifier) {
+	private void lexicalError_identifierTooLong(String identifier, LocatedChar ch) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.lexicalAnalyzer");
-		log.severe("Lexical error: identifier too long : " + identifier);
+		log.severe("Lexical error: identifier too long : " + identifier + "(" + ch + ")");
 	}
 	
+	private void issueLexicalError(String errorString) {
+		GrouseLogger log = GrouseLogger.getLogger("compiler.lexicalAnalyzer");
+		log.severe(errorString);
+	}
+	//////////////////////////////////////////////////////////////////////////////
+	// Comment elimination
 	private Token eliminateComments(LocatedChar ch, PushbackCharStream input){
 		
 		//System.out.println("comments found here");
