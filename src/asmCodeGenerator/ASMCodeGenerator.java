@@ -11,6 +11,7 @@ import lexicalAnalyzer.Punctuator;
 import parseTree.*;
 import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BooleanConstantNode;
+import parseTree.nodeTypes.CharacterConstantNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
 import parseTree.nodeTypes.FloatingConstantNode;
@@ -20,6 +21,7 @@ import parseTree.nodeTypes.NewlineNode;
 import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
+import parseTree.nodeTypes.StringConstantNode;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
@@ -150,6 +152,12 @@ public class ASMCodeGenerator {
 			else if(node.getType() == PrimitiveType.FLOATING) {
 				code.add(LoadF);
 			}
+			else if(node.getType() == PrimitiveType.CHARACTER) {
+				code.add(LoadC);
+			}
+			else if(node.getType() == PrimitiveType.STRING) {
+				code.add(LoadI);
+			}
 			else {
 				assert false : "node " + node;
 			}
@@ -236,6 +244,8 @@ public class ASMCodeGenerator {
 			case INTEGER:	return RunTime.INTEGER_PRINT_FORMAT;
 			case BOOLEAN:	return RunTime.BOOLEAN_PRINT_FORMAT;
 			case FLOATING:	return RunTime.FLOATING_PRINT_FORMAT;
+			case CHARACTER:	return RunTime.CHARACTER_PRINT_FORMAT;
+			case STRING:	return RunTime.STRING_PRINT_FORMAT;
 			default:		
 				assert false : "Type " + type + " unimplemented in ASMCodeGenerator.printFormat()";
 				return "";
@@ -262,6 +272,12 @@ public class ASMCodeGenerator {
 			}
 			if(type == PrimitiveType.FLOATING) {
 				return StoreF;
+			}
+			if(type == PrimitiveType.CHARACTER) {
+				return StoreC;
+			}
+			if(type == PrimitiveType.STRING) {
+				return StoreI;
 			}
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
 			return null;
@@ -316,8 +332,8 @@ public class ASMCodeGenerator {
 			
 //			code.add(JumpPos, trueLabel);
 			addJumpInstruction(childType, operator, trueLabel, falseLabel);
-			
 			code.add(Jump, falseLabel);
+			
 			code.add(Label, trueLabel);
 			code.add(PushI, 1);
 			code.add(Jump, joinLabel);
@@ -476,6 +492,14 @@ public class ASMCodeGenerator {
 			newValueCode(node);
 			
 			code.add(PushF, node.getValue());
+		}
+		public void visit(CharacterConstantNode node) {
+			newValueCode(node);
+			
+			code.add(PushI, node.getValue());
+		}
+		public void visit(StringConstantNode node) {
+			
 		}
 	}
 
