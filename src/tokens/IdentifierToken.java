@@ -15,6 +15,6 @@ public class IdentifierToken extends TokenImp {
 
 	@Override
 	protected String rawString() {
-		return "identifier, " + getLexeme();
+		return "Identifier, " + getLexeme();
 	}
 }

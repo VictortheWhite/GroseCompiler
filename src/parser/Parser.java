@@ -168,7 +168,7 @@ public class Parser {
 		return DeclarationNode.withChildren(declarationToken, identifier, initializer);
 	}
 	private boolean startsDeclaration(Token token) {
-		return token.isLextant(Keyword.IMMUTABLE);
+		return token.isLextant(Keyword.IMMUTABLE) || token.isLextant(Keyword.VARIABLE);
 	}
 
 
