@@ -7,13 +7,15 @@ import semanticAnalyzer.types.Type;
 
 public class Binding {
 	private Type type;
+	private boolean immutablity;
 	private TextLocation textLocation;
 	private MemoryLocation memoryLocation;
 	private String lexeme;
 	
-	public Binding(Type type, TextLocation location, MemoryLocation memoryLocation, String lexeme) {
+	public Binding(Type type, boolean isImmutable, TextLocation location, MemoryLocation memoryLocation, String lexeme) {
 		super();
 		this.type = type;
+		this.immutablity = isImmutable;
 		this.textLocation = location;
 		this.memoryLocation = memoryLocation;
 		this.lexeme = lexeme;
@@ -23,6 +25,7 @@ public class Binding {
 	public String toString() {
 		return "[" + lexeme +
 				" " + type +  // " " + textLocation +	
+				" isImmutable" + immutablity + 
 				" " + memoryLocation +
 				"]";
 	}	
@@ -31,6 +34,9 @@ public class Binding {
 	}
 	public Type getType() {
 		return type;
+	}
+	public boolean getImmutablity() {
+		return immutablity;
 	}
 	public TextLocation getLocation() {
 		return textLocation;
@@ -53,6 +59,7 @@ public class Binding {
 		private static NullBinding instance=null;
 		private NullBinding() {
 			super(PrimitiveType.ERROR,
+					true,						// immutablity
 					TextLocation.nullInstance(),
 					MemoryLocation.nullInstance(),
 					"the-null-binding");

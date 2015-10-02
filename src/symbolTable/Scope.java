@@ -1,6 +1,7 @@
 package symbolTable;
 
 import inputHandler.TextLocation;
+import lexicalAnalyzer.Keyword;
 import logging.GrouseLogger;
 import parseTree.nodeTypes.IdentifierNode;
 import semanticAnalyzer.types.Type;
@@ -65,16 +66,23 @@ public class Scope {
 	public Binding createBinding(IdentifierNode identifierNode, Type type) {
 		Token token = identifierNode.getToken();
 		symbolTable.errorIfAlreadyDefined(token);
-
+		
+		boolean isImmutable = true;
+		if(identifierNode.getParent().getToken().isLextant(Keyword.IMMUTABLE)) {
+			isImmutable = true;
+		} else if(identifierNode.getParent().getToken().isLextant(Keyword.VARIABLE)) {
+			isImmutable = false;
+		}
+		
 		String lexeme = token.getLexeme();
-		Binding binding = allocateNewBinding(type, token.getLocation(), lexeme);	
+		Binding binding = allocateNewBinding(type, isImmutable, token.getLocation(), lexeme);	
 		symbolTable.install(lexeme, binding);
 
 		return binding;
 	}
-	private Binding allocateNewBinding(Type type, TextLocation textLocation, String lexeme) {
+	private Binding allocateNewBinding(Type type, boolean isImmutable, TextLocation textLocation, String lexeme) {
 		MemoryLocation memoryLocation = allocator.allocate(type.getSize());
-		return new Binding(type, textLocation, memoryLocation, lexeme);
+		return new Binding(type, isImmutable, textLocation, memoryLocation, lexeme);
 	}
 	
 ///////////////////////////////////////////////////////////////////////
