@@ -123,8 +123,18 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 				buffer.append(nextChar.getCharacter());
 				appendSubsequentDigits(buffer);
 				return;
-			} else 
-				input.pushback(nextChar);
+			} else if(nextChar.getCharacter() == '+') {
+				LocatedChar nextAfterNextChar = input.next();
+				if(nextAfterNextChar.isDigit()) {
+					// '+' being ignored
+					buffer.append(c.getCharacter());
+					buffer.append(nextAfterNextChar.getCharacter());
+					appendSubsequentDigits(buffer);
+					return;
+				} else 
+					input.pushback(nextAfterNextChar);
+			} 
+			input.pushback(nextChar);
 		}
 		
 		input.pushback(c);
