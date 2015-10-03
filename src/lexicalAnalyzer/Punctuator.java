@@ -16,6 +16,7 @@ public enum Punctuator implements Lextant {
 	LESSOFEQUAL("<="),
 	GREATEROFEQUAL(">="),
 	ASSIGN(":="),
+	CAST(":"),
 	SEPARATOR(","),
 	TERMINATOR(";"), 
 	OPEN_PARENTHESIS("("),

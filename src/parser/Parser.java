@@ -201,6 +201,7 @@ public class Parser {
 	// expr1 -> expr2 [> expr2]?
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
+	// expr3.5 -> expr4:type 
 	// expr4 -> literal
 	//			parenthesis
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
@@ -310,6 +311,28 @@ public class Parser {
 		return startsExpression4(token);
 	}
 	
+	// expr3.5 -> expr4:type
+	
+	private ParseNode parseExpression7over2() {
+		if(!startsExpression4(nowReading)) {
+			return syntaxErrorNode("expression<3.5>");
+		}
+		
+		ParseNode left = parseExpression4();
+		while(nowReading.isLextant(Punctuator.CAST)) {
+			Token castingToken = nowReading;
+			readToken();
+			ParseNode right = parseExpression4();
+			
+			left = BinaryOperatorNode.withChildren(castingToken, left, right);
+		}
+		
+		return left;
+		
+	}
+	private boolean startsExpression7over2(Token token) {
+		return startsExpression4(token);
+	}
 	// expr4 -> literal | parenthesis
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {

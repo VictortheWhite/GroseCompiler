@@ -252,13 +252,6 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			input.pushback(nextChar);
 			issueLexicalError("Lexical Error: unvalid char " + nextChar);
 		}
-		LocatedChar finishQuote = input.next();
-		if(finishQuote.getCharacter()!='\'') {
-			input.pushback(nextChar);
-			input.pushback(finishQuote);
-			issueLexicalError("Lexical Error: unclosed single quote" + finishQuote);
-			return findNextToken();
-		}
 		return CharacterToken.make(ch.getLocation(), nextChar.getCharacter().toString());
 	}
 	//////////////////////////////////////////////////////////////////////////////
