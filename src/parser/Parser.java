@@ -202,6 +202,7 @@ public class Parser {
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
 	// expr4 -> literal
+	//			parenthesis
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr1
@@ -266,7 +267,8 @@ public class Parser {
 		return left;
 	}
 	private boolean startsExpression2(Token token) {
-		return startsLiteral(token);
+		//return startsLiteral(token);
+		return startsExpression3(token);
 	}	
 
 	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
@@ -308,15 +310,31 @@ public class Parser {
 		return startsExpression4(token);
 	}
 	
-	// expr4 -> literal
+	// expr4 -> literal | parenthesis
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {
 			return syntaxErrorNode("expression<4>");
 		}
-		return parseLiteral();
+		if(startsLiteral(nowReading))
+			return parseLiteral();
+		else if(startsParenthesis(nowReading)) {
+			return parseParenthesis();
+		}
+		return syntaxErrorNode("expression<4>");
 	}
 	private boolean startsExpression4(Token token) {
-		return startsLiteral(token);
+		return startsLiteral(token) || startsParenthesis(token);
+	}
+
+	// Parenthesis
+	private ParseNode parseParenthesis() {
+		readToken();
+		ParseNode right = parseExpression();
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		return right;
+	}
+	private boolean startsParenthesis(Token token) {
+		return token.isLextant(Punctuator.OPEN_PARENTHESIS);
 	}
 	
 	// literal -> number | identifier | booleanConstant

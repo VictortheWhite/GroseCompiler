@@ -209,7 +209,7 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 	private Token scanPunctuatorAndComments(LocatedChar ch)
 	{
 		LocatedChar tempC = input.next();
-		if(tempC.getCharacter() == '/'){		// double '/' = comments starter
+		if(ch.getCharacter() == '/' && tempC.getCharacter() == '/') {		// double '/' = comments starter
 			return eliminateComments(tempC, input);
 		} else {
 			input.pushback(tempC);

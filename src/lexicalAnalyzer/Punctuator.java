@@ -18,6 +18,8 @@ public enum Punctuator implements Lextant {
 	ASSIGN(":="),
 	SEPARATOR(","),
 	TERMINATOR(";"), 
+	OPEN_PARENTHESIS("("),
+	CLOSE_PARENTHESIS(")"),
 	OPEN_BRACE("{"),
 	CLOSE_BRACE("}"),
 	NULL_PUNCTUATOR("");
