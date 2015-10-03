@@ -90,6 +90,9 @@ public class Parser {
 		if(startsDeclaration(nowReading)) {
 			return parseDeclaration();
 		}
+		if(startsReassignment(nowReading)) {
+			return parseReassignment();
+		}
 		if(startsPrintStatement(nowReading)) {
 			return parsePrintStatement();
 		}
@@ -98,7 +101,8 @@ public class Parser {
 	}
 	private boolean startsStatement(Token token) {
 		return startsPrintStatement(token) ||
-			   startsDeclaration(token);
+			   startsDeclaration(token) ||
+			   startsReassignment(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -170,7 +174,25 @@ public class Parser {
 	private boolean startsDeclaration(Token token) {
 		return token.isLextant(Keyword.IMMUTABLE) || token.isLextant(Keyword.VARIABLE);
 	}
-
+	
+	// reassignment -> let identifier := expression;
+	private ParseNode parseReassignment() {
+		if(!startsReassignment(nowReading)) {
+			return syntaxErrorNode("reassignment");
+		}
+		Token reassignmentToken = nowReading;
+		readToken();
+		ParseNode identifier = parseIdentifier();
+		expect(Punctuator.ASSIGN);
+		ParseNode initializer = parseExpression();
+		expect(Punctuator.TERMINATOR);
+		
+		return ReassignmentNode.withChildren(reassignmentToken, identifier, initializer);
+	}
+	
+	private boolean startsReassignment(Token token) {
+		return token.isLextant(Keyword.LET);
+	}
 
 	
 	///////////////////////////////////////////////////////////

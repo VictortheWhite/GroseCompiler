@@ -22,6 +22,7 @@ import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
+import parseTree.nodeTypes.ReassignmentNode;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
@@ -251,10 +252,21 @@ public class ASMCodeGenerator {
 				return "";
 			}
 		}
-
+		// Declaration and Reassignment
 		public void visitLeave(DeclarationNode node) {
 			newVoidCode(node);
 			ASMCodeFragment lvalue = removeAddressCode(node.child(0));	
+			ASMCodeFragment rvalue = removeValueCode(node.child(1));
+			
+			code.append(lvalue);
+			code.append(rvalue);
+			
+			Type type = node.getType();
+			code.add(opcodeForStore(type));
+		}
+		public void visitLeave(ReassignmentNode node) {
+			newVoidCode(node);
+			ASMCodeFragment lvalue = removeAddressCode(node.child(0));
 			ASMCodeFragment rvalue = removeValueCode(node.child(1));
 			
 			code.append(lvalue);

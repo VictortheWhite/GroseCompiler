@@ -7,6 +7,7 @@ import tokens.Token;
 public enum Keyword implements Lextant {
 	IMMUTABLE("imm"),
 	VARIABLE("var"),
+	LET("let"),
 	PRINT("print"),
 	NEWLINE("nl"),
 	TRUE("true"),

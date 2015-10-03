@@ -55,7 +55,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
-	// statements and declarations
+	// statements, declarations and reassignments
 	@Override
 	public void visitLeave(PrintStatementNode node) {
 	}
@@ -69,6 +69,20 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		
 		identifier.setType(declarationType);
 		addBinding(identifier, declarationType);
+	}
+	@Override
+	public void visitLeave(ReassignmentNode node) {
+		IdentifierNode identifier = (IdentifierNode) node.child(0);
+		ParseNode initializer = node.child(1);
+		
+		if(identifier.getBinding().getImmutablity()) {
+			reassignImmutableError(node, identifier.getToken().getLexeme());
+		} 
+		if(identifier.getType() != initializer.getType()) {
+			typeCheckError(node, Arrays.asList(identifier.getType(),initializer.getType()));
+		}
+		
+		node.setType(identifier.getType());
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -164,6 +178,9 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		
 		logError("operator " + token.getLexeme() + " not defined for types " 
 				 + operandTypes  + " at " + token.getLocation());	
+	}
+	private void reassignImmutableError(ParseNode node, String identifier) {		
+		logError("Immutable identifier (" + identifier +") cannot be reassigned");
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

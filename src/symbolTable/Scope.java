@@ -73,7 +73,7 @@ public class Scope {
 		} else if(identifierNode.getParent().getToken().isLextant(Keyword.VARIABLE)) {
 			isImmutable = false;
 		}
-		
+				
 		String lexeme = token.getLexeme();
 		Binding binding = allocateNewBinding(type, isImmutable, token.getLocation(), lexeme);	
 		symbolTable.install(lexeme, binding);
