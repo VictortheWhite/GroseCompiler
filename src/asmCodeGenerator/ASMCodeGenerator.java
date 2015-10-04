@@ -303,6 +303,8 @@ public class ASMCodeGenerator {
 
 			if(isComparisonOperator(operator)) {
 				visitComparisonOperatorNode(node, operator);
+			} else if(operator==Punctuator.CAST) {
+				visitCastingOperatorNode(node);
 			}
 			else {
 				visitNormalBinaryOperatorNode(node);
@@ -535,6 +537,62 @@ public class ASMCodeGenerator {
 			return null;
 		}
 
+		// casting
+		private void visitCastingOperatorNode(BinaryOperatorNode node) {
+			newValueCode(node);
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			code.append(arg1);
+			
+			Type childType = node.child(0).getType();
+			Type targetType = node.child(1).getType();
+			if(childType == PrimitiveType.INTEGER) {
+				if(targetType == PrimitiveType.CHARACTER) {
+					code.add(PushI, 255);
+					code.add(BTAnd);
+				} else if(targetType == PrimitiveType.FLOATING) {
+					code.add(ConvertF);
+				} else if(targetType == PrimitiveType.BOOLEAN) {
+					String trueLabel  = labeller.newLabelSameNumber("-cast-boolean-true-", "");
+					String falseLabel = labeller.newLabelSameNumber("-cast-boolean-false-", "");
+					String joinLabel  = labeller.newLabelSameNumber("-cast-boolean-join-", "");
+					
+					code.add(JumpTrue, trueLabel);
+					code.add(Jump, falseLabel);
+					code.add(Label, trueLabel);
+					code.add(PushI, 1);
+					code.add(Jump, joinLabel);
+					code.add(Label, falseLabel);
+					code.add(PushI, 0);
+					code.add(Jump, joinLabel);
+					code.add(Label, joinLabel);
+				} else
+					return;
+			} else if(childType == PrimitiveType.FLOATING) {
+				if(targetType == PrimitiveType.INTEGER) {
+					code.add(ConvertI);
+				} else
+					return;
+			} else if(childType == PrimitiveType.CHARACTER) {
+				if(targetType == PrimitiveType.INTEGER) {
+					return;		//do nothing
+				} else if(targetType == PrimitiveType.BOOLEAN) {
+					String trueLabel  = labeller.newLabelSameNumber("-cast-boolean-true-", "");
+					String falseLabel = labeller.newLabelSameNumber("-cast-boolean-false-", "");
+					String joinLabel  = labeller.newLabelSameNumber("-cast-boolean-join-", "");
+					
+					code.add(JumpTrue, trueLabel);
+					code.add(Jump, falseLabel);
+					code.add(Label, trueLabel);
+					code.add(PushI, 1);
+					code.add(Jump, joinLabel);
+					code.add(Label, falseLabel);
+					code.add(PushI, 0);
+					code.add(Jump, joinLabel);
+					code.add(Label, joinLabel);
+				}
+			}
+		}
+		
 		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
 			if(opcode == ASMOpcode.Divide) {
 				code.add(Duplicate);

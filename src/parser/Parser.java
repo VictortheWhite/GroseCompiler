@@ -5,6 +5,7 @@ import java.util.Arrays;
 import logging.GrouseLogger;
 import parseTree.*;
 import parseTree.nodeTypes.*;
+import parseTree.nodeTypes.TypeNode;
 import tokens.*;
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
@@ -224,12 +225,12 @@ public class Parser {
 		}
 		
 		ParseNode left = parseExpression2();
-		if(isLextantComparisonOperator(nowReading)) {
+		while(isLextantComparisonOperator(nowReading)) {
 			Token compareToken = nowReading;
 			readToken();
 			ParseNode right = parseExpression2();
 			
-			return BinaryOperatorNode.withChildren(compareToken, left, right);
+			left = BinaryOperatorNode.withChildren(compareToken, left, right);
 		}
 		return left;
 
@@ -278,7 +279,7 @@ public class Parser {
 			return syntaxErrorNode("expression<3>");
 		}
 		
-		ParseNode left = parseExpression4();
+		ParseNode left = parseExpression7over2();
 		/*
 		while(nowReading.isLextant(Punctuator.MULTIPLY)) {
 			Token multiplicativeToken = nowReading;
@@ -291,13 +292,13 @@ public class Parser {
 			if(nowReading.isLextant(Punctuator.MULTIPLY)) {
 				Token multiplicativeToken = nowReading;
 				readToken();
-				ParseNode right = parseExpression4();
+				ParseNode right = parseExpression7over2();
 				
 				left = BinaryOperatorNode.withChildren(multiplicativeToken, left, right);
 			} else if(nowReading.isLextant(Punctuator.DIVIDE)) {
 				Token divisiveToken = nowReading;
 				readToken();
-				ParseNode right = parseExpression();
+				ParseNode right = parseExpression7over2();
 				
 				left = BinaryOperatorNode.withChildren(divisiveToken, left, right);
 			} else {
@@ -308,7 +309,7 @@ public class Parser {
 		return left;
 	}
 	private boolean startsExpression3(Token token) {
-		return startsExpression4(token);
+		return startsExpression7over2(token);
 	}
 	
 	// expr3.5 -> expr4:type
@@ -321,10 +322,16 @@ public class Parser {
 		ParseNode left = parseExpression4();
 		while(nowReading.isLextant(Punctuator.CAST)) {
 			Token castingToken = nowReading;
+			ParseNode right = null;
 			readToken();
-			ParseNode right = parseExpression4();
+			if(nowReading.isLextant(Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL)) {
+				right = new TypeNode(nowReading);
+			} else {
+				return syntaxErrorNode("expression casting: expected type");
+			}
 			
 			left = BinaryOperatorNode.withChildren(castingToken, left, right);
+			readToken();
 		}
 		
 		return left;
