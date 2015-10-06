@@ -547,7 +547,7 @@ public class ASMCodeGenerator {
 			Type targetType = node.child(1).getType();
 			if(childType == PrimitiveType.INTEGER) {
 				if(targetType == PrimitiveType.CHARACTER) {
-					code.add(PushI, 255);
+					code.add(PushI, 127);
 					code.add(BTAnd);
 				} else if(targetType == PrimitiveType.FLOATING) {
 					code.add(ConvertF);

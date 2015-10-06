@@ -261,12 +261,17 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		StringBuffer buffer = new StringBuffer();
 		LocatedChar nextChar = input.next();
 
-		while(nextChar.isPrintableChar()) {
-			buffer.append(nextChar.getCharacter());
-			nextChar = input.next();
+		while(true) {
+			
 			if(nextChar.getCharacter() == '\"') {
 				return StringToken.make(ch.getLocation(), buffer.toString());
 			}
+			if(nextChar.isPrintableChar()) {
+				buffer.append(nextChar.getCharacter());
+				nextChar = input.next();
+			} else 
+				break;
+
 		}	
 			issueLexicalError("Lexical Error: unclosed double quotes " + ch);
 			return findNextToken();		
@@ -292,12 +297,8 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 		return false;
 	}	
 	private boolean isIdentifierStart(LocatedChar ch) {
-		if(ch.isLowerCase())
-			return true;
-		else if(ch.isUpperCase())
-			return true;
-		else
-			return false;
+		return ch.isLowerCase() || ch.isUpperCase() || ch.getCharacter() == '_';
+
 	}
 	private boolean isPunctuatorStart(LocatedChar lc) {
 		char c = lc.getCharacter();
