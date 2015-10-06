@@ -34,7 +34,7 @@ public class TypeNode extends ParseNode {
 		if(token.isLextant(Keyword.INT)) {
 			return PrimitiveType.INTEGER;
 		} else if(token.isLextant(Keyword.FLOAT)) {
-			return PrimitiveType.INTEGER;
+			return PrimitiveType.FLOATING;
 		} else if(token.isLextant(Keyword.CHAR)) {
 			return PrimitiveType.CHARACTER;
 		} else if(token.isLextant(Keyword.STRING)) {
