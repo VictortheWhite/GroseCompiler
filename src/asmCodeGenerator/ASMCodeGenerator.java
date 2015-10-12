@@ -303,7 +303,10 @@ public class ASMCodeGenerator {
 
 			if(isComparisonOperator(operator)) {
 				visitComparisonOperatorNode(node, operator);
-			} else if(operator==Punctuator.CAST) {
+			} else if(isBooleanOperator(operator)) {
+				visitBooleanOperatorNode(node,operator);
+			}
+			else if(operator==Punctuator.CAST) {
 				visitCastingOperatorNode(node);
 			}
 			else {
@@ -315,9 +318,8 @@ public class ASMCodeGenerator {
 					|| operator==Punctuator.LESSOFEQUAL || operator==Punctuator.EQUAL || operator==Punctuator.NOTEQUAL;
 		}
 		
-		//comparison operator
-		private void visitComparisonOperatorNode(BinaryOperatorNode node,
-				Lextant operator) {
+		// comparison operator
+		private void visitComparisonOperatorNode(BinaryOperatorNode node, Lextant operator) {
 			
 			
 			
@@ -494,6 +496,50 @@ public class ASMCodeGenerator {
 
 		}
 		
+		// boolean operator
+		private boolean isBooleanOperator(Lextant operator) {
+			return operator==Punctuator.BOOLEANAND || operator==Punctuator.BOOLEANOR;
+		}
+		private void visitBooleanOperatorNode(BinaryOperatorNode node, Lextant operator) {
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			ASMCodeFragment arg2 = removeValueCode(node.child(1));
+			String falseLabel = labeller.newLabel("boolean-binary-operator-false", "");
+			String trueLabel = labeller.newLabelSameNumber("boolean-binary-operator-true", "");
+			String joinLabel = labeller.newLabelSameNumber("boolean-binary-operator-join", "");
+			newValueCode(node);
+			
+			//examine arg1
+			code.append(arg1);
+			if(operator == Punctuator.BOOLEANAND) {
+				code.add(JumpFalse, falseLabel);
+			} else if(operator == Punctuator.BOOLEANOR) {
+				code.add(JumpTrue, trueLabel);
+			}			
+			
+			//examine arg2
+			code.append(arg2);
+			if(operator == Punctuator.BOOLEANAND) {
+				code.add(JumpFalse, falseLabel);
+			} else if(operator == Punctuator.BOOLEANOR) {
+				code.add(JumpTrue, trueLabel);
+				code.add(Jump, falseLabel);
+			}
+			
+			code.add(Label, trueLabel);
+			code.add(PushI, 1);
+			code.add(Jump, joinLabel);
+			code.add(Label, falseLabel);
+			code.add(PushI, 0);
+			code.add(Jump, joinLabel);
+			code.add(Label, joinLabel);
+
+			
+
+		}
+		
+		
+		
+		
 		// nomal binary operator
 		private void visitNormalBinaryOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);
@@ -592,6 +638,7 @@ public class ASMCodeGenerator {
 				}
 			}
 		}
+		
 		
 		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
 			if(opcode == ASMOpcode.Divide) {

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import logging.GrouseLogger;
 import parseTree.*;
 import parseTree.nodeTypes.*;
-import parseTree.nodeTypes.TypeNode;
 import tokens.*;
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
@@ -198,8 +197,9 @@ public class Parser {
 	
 	///////////////////////////////////////////////////////////
 	// expressions
-	// expr  -> expr1
-	// expr1 -> expr2 [> expr2]?
+	// expr  -> expr0
+	// expr0 -> expr1 [ && expr1 | ||expr1]*
+	// expr1 -> expr2 [> expr2]*
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
 	// expr3.5 -> expr4:type 
@@ -212,12 +212,37 @@ public class Parser {
 		if(!startsExpression(nowReading)) {
 			return syntaxErrorNode("expression");
 		}
-		return parseExpression1();
+		return parseExpression0();
 	}
 	private boolean startsExpression(Token token) {
-		return startsExpression1(token);
+		return startsExpression0(token);
 	}
 
+	// expr0 -> expr1 [ && expr1 | ||expr1]*
+	private ParseNode parseExpression0() {
+		if(!startsExpression0(nowReading)) {
+			return syntaxErrorNode("expression<0>");
+		}
+		ParseNode left = parseExpression1();
+		while(isLextantBooleanOperator(nowReading)) {
+			Token booleanOperatorToken = nowReading;
+			readToken();
+			ParseNode right = parseExpression1();
+			
+			left = BinaryOperatorNode.withChildren(booleanOperatorToken, left, right);
+		}
+		return left;
+	}
+	
+	private boolean isLextantBooleanOperator(Token nowReading) {
+		return nowReading.isLextant(Punctuator.BOOLEANAND) || nowReading.isLextant(Punctuator.BOOLEANOR);
+	}
+	
+	private boolean startsExpression0(Token nowReading) {
+		return startsExpression1(nowReading);
+	}
+	
+	
 	// expr1 -> expr2 [> expr2]?
 	private ParseNode parseExpression1() {
 		if(!startsExpression1(nowReading)) {
