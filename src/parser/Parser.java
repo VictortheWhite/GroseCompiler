@@ -201,8 +201,9 @@ public class Parser {
 	// expr0 -> expr1 [ && expr1 | ||expr1]*
 	// expr1 -> expr2 [> expr2]*
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
-	// expr3 -> expr4 [MULT expr4]*  (left-assoc)
-	// expr3.5 -> expr4:type 
+	// expr3 -> expr3.5 [MULT expr3.5]*  (left-assoc)
+	// expr3.5 -> exprUnaryOp [:type]* 
+	// exprUnaryOp -> [!|copy]* expr4 
 	// expr4 -> literal
 	//			parenthesis
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
@@ -337,14 +338,14 @@ public class Parser {
 		return startsExpression7over2(token);
 	}
 	
-	// expr3.5 -> expr4:type
+	// expr3.5 -> exprUnaryOp:type
 	
 	private ParseNode parseExpression7over2() {
-		if(!startsExpression4(nowReading)) {
+		if(!startsExpression7over2(nowReading)) {
 			return syntaxErrorNode("expression<3.5>");
 		}
 		
-		ParseNode left = parseExpression4();
+		ParseNode left = parseExpressionUnaryOp();
 		while(nowReading.isLextant(Punctuator.CAST)) {
 			Token castingToken = nowReading;
 			ParseNode right = null;
@@ -363,8 +364,41 @@ public class Parser {
 		
 	}
 	private boolean startsExpression7over2(Token token) {
-		return startsExpression4(token);
+		return startsExpressionUnaryOp(token);
 	}
+	// Unary operator
+	// exprUnaryOp -> [!|copy]* expr4 right-assoc
+	private ParseNode parseExpressionUnaryOp() {
+		if(!startsExpressionUnaryOp(nowReading)) {
+			return syntaxErrorNode("expression UnaryOp");
+		}
+		ParseNode UnaryRoot = null;
+		ParseNode currentNode = null;
+		if(!isUnaryOperator(nowReading)) {
+			return parseExpression4();
+		} else {
+			UnaryRoot = new UnaryOperatorNode(nowReading);
+			currentNode = UnaryRoot;
+			readToken();
+		}
+
+		while(isUnaryOperator(nowReading)) {
+			Token unaryOperatorToken = nowReading;
+			currentNode = UnaryOperatorNode.addAndReturnChildren(unaryOperatorToken, currentNode);	
+			readToken();
+		}
+		currentNode.appendChild(parseExpression4());
+		return UnaryRoot;
+
+		
+	}
+	private boolean startsExpressionUnaryOp(Token token) {
+		return isUnaryOperator(token) || startsExpression4(token);
+	}
+	private boolean isUnaryOperator(Token token) {
+		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT);
+	}
+	
 	// expr4 -> literal | parenthesis
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {

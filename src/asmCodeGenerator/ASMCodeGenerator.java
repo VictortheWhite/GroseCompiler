@@ -22,6 +22,7 @@ import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
+import parseTree.nodeTypes.UnaryOperatorNode;
 import parseTree.nodeTypes.ReassignmentNode;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
@@ -297,7 +298,7 @@ public class ASMCodeGenerator {
 
 
 		///////////////////////////////////////////////////////////////////////////
-		// expressions
+		// expressions --------Binary operator
 		public void visitLeave(BinaryOperatorNode node) {
 			Lextant operator = node.getOperator();
 
@@ -536,10 +537,7 @@ public class ASMCodeGenerator {
 			
 
 		}
-		
-		
-		
-		
+			
 		// nomal binary operator
 		private void visitNormalBinaryOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);
@@ -639,7 +637,6 @@ public class ASMCodeGenerator {
 			}
 		}
 		
-		
 		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
 			if(opcode == ASMOpcode.Divide) {
 				code.add(Duplicate);
@@ -649,6 +646,33 @@ public class ASMCodeGenerator {
 				code.add(JumpFZero,RunTime.FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR);
 			} else
 				return;
+		}
+		
+		// expressions --------Binary operator
+		public void visitLeave(UnaryOperatorNode node) {
+			Lextant operator = node.getOperator();
+			if(operator == Punctuator.BOOLEANCOMPLIMENT) {
+				visitBooleanComplimentNode(node, operator);
+			}
+		}
+		public void visitBooleanComplimentNode(UnaryOperatorNode node, Lextant operator) {
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			String falseLabel = labeller.newLabel("boolean-binary-operator-false", "");
+			String trueLabel = labeller.newLabelSameNumber("boolean-binary-operator-true", "");
+			String joinLabel = labeller.newLabelSameNumber("boolean-binary-operator-join", "");
+			
+			newValueCode(node);
+			
+			code.append(arg1);
+			code.add(JumpTrue, falseLabel);
+			
+			code.add(Label, trueLabel);
+			code.add(PushI, 1);
+			code.add(Jump, joinLabel);
+			code.add(Label, falseLabel);
+			code.add(PushI, 0);
+			code.add(Jump, joinLabel);
+			code.add(Label, joinLabel);
 		}
 		
 		///////////////////////////////////////////////////////////////////////////
