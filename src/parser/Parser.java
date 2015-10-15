@@ -247,7 +247,6 @@ public class Parser {
 		//deal with "else"
 		if(nowReading.isLextant(Keyword.ELSE)) {
 			ParseNode elseBlock = parseElseStatement();
-			System.out.println(elseBlock);
 			blocks.add(elseBlock);
 		}
 		return IfStatementNode.withChildren(ifStatementToken, condition, blocks);

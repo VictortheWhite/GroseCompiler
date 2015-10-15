@@ -10,12 +10,14 @@ import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
 import parseTree.nodeTypes.BinaryOperatorNode;
+import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.CharacterConstantNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
 import parseTree.nodeTypes.FloatingConstantNode;
 import parseTree.nodeTypes.IdentifierNode;
+import parseTree.nodeTypes.IfStatementNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.NewlineNode;
 import parseTree.nodeTypes.PrintStatementNode;
@@ -23,6 +25,7 @@ import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
 import parseTree.nodeTypes.UnaryOperatorNode;
+import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
@@ -188,6 +191,14 @@ public class ASMCodeGenerator {
 				code.append(childCode);
 			}
 		}
+		public void visitLeave(BlockNode node)	{
+			newVoidCode(node);
+			for(ParseNode child: node.getChildren()) {
+				ASMCodeFragment childCode = removeVoidCode(child);
+				code.append(childCode);
+			}
+		}
+		
 
 		///////////////////////////////////////////////////////////////////////////
 		// statements and declarations
@@ -296,6 +307,45 @@ public class ASMCodeGenerator {
 			return null;
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		// control flows statements------ if while and for
+		public void visitLeave(IfStatementNode node) {
+			newVoidCode(node);
+			ASMCodeFragment condition = removeValueCode(node.child(0));
+			ASMCodeFragment TrueBlock = removeVoidCode(node.child(1));
+			
+			String startsElseBlockLabel = labeller.newLabel("else-block-start", ""); 
+			String endIfElseStatementLabel = labeller.newLabelSameNumber("if-else-stmt-end", "");
+
+			
+			code.append(condition);
+			code.add(JumpFalse, startsElseBlockLabel);
+			code.append(TrueBlock);
+			code.add(Jump, endIfElseStatementLabel);
+			code.add(Label, startsElseBlockLabel);
+			if(node.getChildren().size()==3) {
+				ASMCodeFragment ElseBlock = removeVoidCode(node.child(2));
+				code.append(ElseBlock);
+			}				
+			code.add(Label, endIfElseStatementLabel);
+
+		}
+		
+		public void visitLeave(WhileStatementNode node) {
+			newVoidCode(node);
+			ASMCodeFragment condition = removeValueCode(node.child(0));
+			ASMCodeFragment Block = removeVoidCode(node.child(1));
+			
+			String startsLoopLabel = labeller.newLabel("while-loop-start", ""); 
+			String endsLoopLabel = labeller.newLabelSameNumber("while-loop-end", "");
+			
+			code.add(Label, startsLoopLabel);
+			code.append(condition);
+			code.add(JumpFalse, endsLoopLabel);
+			code.append(Block);
+			code.add(Jump, startsLoopLabel);
+			code.add(Label, endsLoopLabel);
+		}
 
 		///////////////////////////////////////////////////////////////////////////
 		// expressions --------Binary operator

@@ -30,12 +30,21 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visitEnter(ProgramNode node) {
 		enterProgramScope(node);
 	}
+	@Override
 	public void visitLeave(ProgramNode node) {
 		leaveScope(node);
 	}
 	public void visitEnter(MainBlockNode node) {
 	}
 	public void visitLeave(MainBlockNode node) {
+	}
+	@Override
+	public void visitEnter(BlockNode node) {
+		enterSubscope(node);
+	}
+	@Override
+	public void visitLeave(BlockNode node) {
+		leaveScope(node);
 	}
 	
 	
@@ -45,7 +54,6 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		Scope scope = Scope.createProgramScope();
 		node.setScope(scope);
 	}	
-	@SuppressWarnings("unused")
 	private void enterSubscope(ParseNode node) {
 		Scope baseScope = node.getLocalScope();
 		Scope scope = baseScope.createSubscope();
@@ -84,6 +92,22 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		}
 		
 		node.setType(identifier.getType());
+	}
+	/////////////////////////////////////////////////////////////////////////////
+	//control flow statement
+	@Override
+	public void visitLeave(IfStatementNode node) {
+		ParseNode condition = node.child(0);
+		if(condition.getType() != PrimitiveType.BOOLEAN) {
+			logError("Expected boolean type for if (condition)");
+		}
+	}
+	@Override
+	public void visitLeave(WhileStatementNode node) {
+		ParseNode condition = node.child(0);
+		if(condition.getType() != PrimitiveType.BOOLEAN) {
+			logError("Expected boolean type for if (condition)");
+		}
 	}
 
 	///////////////////////////////////////////////////////////////////////////

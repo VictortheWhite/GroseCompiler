@@ -6,6 +6,9 @@ import parseTree.nodeTypes.*;
 public interface ParseNodeVisitor {
 	
 	// non-leaf nodes: visitEnter and visitLeave
+	void visitEnter(ParseNode node);
+	void visitLeave(ParseNode node);
+	
 	void visitEnter(BinaryOperatorNode node);
 	void visitLeave(BinaryOperatorNode node);
 	
@@ -15,14 +18,23 @@ public interface ParseNodeVisitor {
 	void visitEnter(MainBlockNode node);
 	void visitLeave(MainBlockNode node);
 
+	void visitEnter(BlockNode node);
+	void visitLeave(BlockNode node);
+	
 	void visitEnter(DeclarationNode node);
 	void visitLeave(DeclarationNode node);
 
 	void visitEnter(ReassignmentNode node);
 	void visitLeave(ReassignmentNode node);
 	
-	void visitEnter(ParseNode node);
-	void visitLeave(ParseNode node);
+	void visitEnter(IfStatementNode node);
+	void visitLeave(IfStatementNode node);
+	
+	void visitEnter(WhileStatementNode node);
+	void visitLeave(WhileStatementNode node);
+	
+	//void visitEnter(ForStatementNode node);
+	//void visitEnetr(ForStatementNode node);
 	
 	void visitEnter(PrintStatementNode node);
 	void visitLeave(PrintStatementNode node);
@@ -86,12 +98,38 @@ public interface ParseNodeVisitor {
 		public void visitLeave(MainBlockNode node) {
 			defaultVisitLeave(node);
 		}				
+		public void visitEnter(BlockNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(BlockNode node) {
+			defaultVisitLeave(node);
+		}
 		public void visitEnter(ParseNode node) {
 			defaultVisitEnter(node);
 		}
 		public void visitLeave(ParseNode node) {
 			defaultVisitLeave(node);
 		}
+		public void visitEnter(IfStatementNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(IfStatementNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(WhileStatementNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(WhileStatementNode node) {
+			defaultVisitLeave(node);
+		}
+		/*
+		public void visitEnetr(ForStatementNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ForStatementNode node) {
+			defaultVisitLeave(node);
+		}
+		*/
 		public void visitEnter(PrintStatementNode node) {
 			defaultVisitEnter(node);
 		}
@@ -104,8 +142,6 @@ public interface ParseNodeVisitor {
 		public void visitLeave(ProgramNode node) {
 			defaultVisitLeave(node);
 		}
-		
-
 		public void visit(BooleanConstantNode node) {
 			defaultVisitForLeaf(node);
 		}
