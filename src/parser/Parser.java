@@ -1,6 +1,8 @@
 package parser;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
 
 import logging.GrouseLogger;
 import parseTree.*;
@@ -57,9 +59,9 @@ public class Parser {
 	
 	
 	///////////////////////////////////////////////////////////
-	// mainBlock
+	// MainBlock
 	
-	// mainBlock -> { statement* }
+	// MainBlock -> { statement* }
 	private ParseNode parseMainBlock() {
 		if(!startsMainBlock(nowReading)) {
 			return syntaxErrorNode("mainBlock");
@@ -75,6 +77,28 @@ public class Parser {
 		return mainBlock;
 	}
 	private boolean startsMainBlock(Token token) {
+		return token.isLextant(Punctuator.OPEN_BRACE);
+	}
+	
+	///////////////////////////////////////////////////////////
+	// Block
+	// Block -> { statement* }
+	private ParseNode parseBlock() {
+		if(!startsBlock(nowReading)) {
+			return syntaxErrorNode("Block");
+		}
+		ParseNode Block = new BlockNode(nowReading);
+		expect(Punctuator.OPEN_BRACE);
+		
+		while(startsStatement(nowReading)) {
+			ParseNode statement = parseStatement();
+			Block.appendChild(statement);
+		}
+		expect(Punctuator.CLOSE_BRACE);
+		return Block;
+	}
+	
+	private boolean startsBlock(Token token) {
 		return token.isLextant(Punctuator.OPEN_BRACE);
 	}
 	
@@ -96,13 +120,25 @@ public class Parser {
 		if(startsPrintStatement(nowReading)) {
 			return parsePrintStatement();
 		}
+		if(startsIfStatement(nowReading)) {
+			return parseIfStatement();
+		}
+		if(startsWhileStatement(nowReading)) {
+			return parseWhileStatement();
+		}
+		if(startsForStatement(nowReading)) {
+			return parseForStatement();
+		}
 		assert false : "bad token " + nowReading + " in parseStatement()";
 		return null;
 	}
 	private boolean startsStatement(Token token) {
 		return startsPrintStatement(token) ||
 			   startsDeclaration(token) ||
-			   startsReassignment(token);
+			   startsReassignment(token) ||
+			   startsIfStatement(token) ||
+			   startsWhileStatement(token) ||
+			   startsForStatement(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -193,6 +229,69 @@ public class Parser {
 	private boolean startsReassignment(Token token) {
 		return token.isLextant(Keyword.LET);
 	}
+	
+	// ifStmt -> if (expr) block (else block)?
+	private ParseNode parseIfStatement() {
+		if(!startsIfStatement(nowReading)) {
+			return syntaxErrorNode("IfStatement");
+		}
+		Token ifStatementToken = nowReading;
+		readToken();
+		expect(Punctuator.OPEN_PARENTHESIS);
+		ParseNode condition = parseExpression();
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		ParseNode IfBlock = parseBlock();
+		List<ParseNode> blocks = new Vector<ParseNode>();
+		blocks.add(IfBlock);
+		
+		//deal with "else"
+		if(nowReading.isLextant(Keyword.ELSE)) {
+			ParseNode elseBlock = parseElseStatement();
+			System.out.println(elseBlock);
+			blocks.add(elseBlock);
+		}
+		return IfStatementNode.withChildren(ifStatementToken, condition, blocks);
+		
+	}
+	private ParseNode parseElseStatement() {
+		if(!nowReading.isLextant(Keyword.ELSE)) {
+			return syntaxErrorNode("ElseStatement");
+		}
+		readToken();
+		return parseBlock();
+	}
+	
+	private boolean startsIfStatement(Token token) {
+		return token.isLextant(Keyword.IF);
+	}
+	
+	// whileStmt -> while (expr) block
+	private ParseNode parseWhileStatement() {
+		if(!startsWhileStatement(nowReading)) {
+			return syntaxErrorNode("whileStatement");
+		}
+		Token WhileStatementToken = nowReading;
+		readToken();
+		expect(Punctuator.OPEN_PARENTHESIS);
+		ParseNode condition = parseExpression();
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		ParseNode block = parseBlock();
+		return WhileStatementNode.withChildren(WhileStatementToken, condition, block);
+	}
+	private boolean startsWhileStatement(Token token) {
+		return token.isLextant(Keyword.WHILE);
+	}
+	
+	// forStem -> for ( index identifier for arrayType) block
+	private ParseNode parseForStatement() {
+		//just to get the program running
+		return new ParseNode(nowReading);
+	}
+	private boolean startsForStatement(Token token) {
+		return token.isLextant(Keyword.FOR);
+	}
+	
+	
 
 	
 	///////////////////////////////////////////////////////////
