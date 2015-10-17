@@ -6,6 +6,7 @@ import java.util.Map;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 import asmCodeGenerator.codeStorage.ASMOpcode;
 import asmCodeGenerator.runtime.RunTime;
+import asmCodeGenerator.Header;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
@@ -37,6 +38,7 @@ import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 // do not call the code generator if any errors have occurred during analysis.
 public class ASMCodeGenerator {
 	private static Labeller labeller = new Labeller();
+	private static Header header = new Header();
 
 	ParseNode root;
 
@@ -232,6 +234,7 @@ public class ASMCodeGenerator {
 
 			code.append(removeValueCode(node));
 			convertToStringIfBoolean(node);
+			addAddressOffestIfString(node);
 			code.add(PushD, format);
 			code.add(Printf);
 		}
@@ -250,6 +253,15 @@ public class ASMCodeGenerator {
 			code.add(PushD, RunTime.BOOLEAN_TRUE_STRING);
 			code.add(Label, endLabel);
 		}		
+		private void addAddressOffestIfString(ParseNode node) {
+			if(node.getType() != PrimitiveType.STRING) {
+				return;
+			}
+			
+			code.add(PushI, 13);
+			code.add(Add);
+		}
+
 		private String printFormat(Type type) {
 			assert type instanceof PrimitiveType;
 			
@@ -756,7 +768,9 @@ public class ASMCodeGenerator {
 			newValueCode(node);
 			
 			String stringLabel = labeller.newLabel("$string-constant", "");
+			
 			code.add(DLabel, stringLabel);
+			header.addHeader(code, node);
 			code.add(DataS, node.getValue());
 			code.add(PushD, stringLabel);
 		}
