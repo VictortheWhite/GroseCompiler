@@ -552,7 +552,7 @@ public class ASMCodeGenerator {
 				} else if(targetType == PrimitiveType.FLOATING) {
 					code.add(ConvertF);
 				} else if(targetType == PrimitiveType.BOOLEAN) {
-					String trueLabel  = labeller.newLabelSameNumber("-cast-boolean-true-", "");
+					String trueLabel  = labeller.newLabel("-cast-boolean-true-", "");
 					String falseLabel = labeller.newLabelSameNumber("-cast-boolean-false-", "");
 					String joinLabel  = labeller.newLabelSameNumber("-cast-boolean-join-", "");
 					
@@ -576,7 +576,7 @@ public class ASMCodeGenerator {
 				if(targetType == PrimitiveType.INTEGER) {
 					return;		//do nothing
 				} else if(targetType == PrimitiveType.BOOLEAN) {
-					String trueLabel  = labeller.newLabelSameNumber("-cast-boolean-true-", "");
+					String trueLabel  = labeller.newLabel("-cast-boolean-true-", "");
 					String falseLabel = labeller.newLabelSameNumber("-cast-boolean-false-", "");
 					String joinLabel  = labeller.newLabelSameNumber("-cast-boolean-join-", "");
 					
