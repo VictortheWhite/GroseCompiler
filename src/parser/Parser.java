@@ -295,8 +295,9 @@ public class Parser {
 	
 	///////////////////////////////////////////////////////////
 	// expressions
-	// expr  -> expr0
-	// expr0 -> expr1 [ && expr1 | ||expr1]*
+	// expr  -> expr0or
+	// expr0or -> expr1 [|| expr0and]*
+	// expr0and -> expr1 [&& expr1]*
 	// expr1 -> expr2 [> expr2]*
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr3.5 [MULT expr3.5]*  (left-assoc)
@@ -306,24 +307,44 @@ public class Parser {
 	//			parenthesis
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
-	// expr  -> expr1
+	// expr  -> expr0
 	private ParseNode parseExpression() {		
 		if(!startsExpression(nowReading)) {
 			return syntaxErrorNode("expression");
 		}
-		return parseExpression0();
+		return parseExpression0or();
 	}
 	private boolean startsExpression(Token token) {
-		return startsExpression0(token);
+		return startsExpression0or(token);
 	}
 
-	// expr0 -> expr1 [ && expr1 | ||expr1]*
-	private ParseNode parseExpression0() {
-		if(!startsExpression0(nowReading)) {
-			return syntaxErrorNode("expression<0>");
+	// expr0or -> expr1 [||expr0and]*
+	private ParseNode parseExpression0or() {
+		if(!startsExpression0or(nowReading)) {
+			return syntaxErrorNode("expression<0or>");
+		}
+		ParseNode left = parseExpression0and();
+		while(nowReading.isLextant(Punctuator.BOOLEANOR)) {
+			Token booleanOperatorToken = nowReading;
+			readToken();
+			ParseNode right = parseExpression0and();
+			
+			left = BinaryOperatorNode.withChildren(booleanOperatorToken, left, right);
+		}
+		return left;
+	}
+	
+	private boolean startsExpression0or(Token nowReading) {
+		return startsExpression0and(nowReading);
+	}
+	
+	// expr0and -> expr1 [&& expr1]*
+	private ParseNode parseExpression0and() {
+		if(!startsExpression0and(nowReading)) {
+			return syntaxErrorNode("Expression<0and>");
 		}
 		ParseNode left = parseExpression1();
-		while(isLextantBooleanOperator(nowReading)) {
+		while(nowReading.isLextant(Punctuator.BOOLEANAND)) {
 			Token booleanOperatorToken = nowReading;
 			readToken();
 			ParseNode right = parseExpression1();
@@ -331,16 +352,11 @@ public class Parser {
 			left = BinaryOperatorNode.withChildren(booleanOperatorToken, left, right);
 		}
 		return left;
+		
 	}
-	
-	private boolean isLextantBooleanOperator(Token nowReading) {
-		return nowReading.isLextant(Punctuator.BOOLEANAND) || nowReading.isLextant(Punctuator.BOOLEANOR);
-	}
-	
-	private boolean startsExpression0(Token nowReading) {
+	private boolean startsExpression0and(Token nowReading) {
 		return startsExpression1(nowReading);
 	}
-	
 	
 	// expr1 -> expr2 [> expr2]?
 	private ParseNode parseExpression1() {

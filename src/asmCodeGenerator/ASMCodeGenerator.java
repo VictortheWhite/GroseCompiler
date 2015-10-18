@@ -5,6 +5,7 @@ import java.util.Map;
 
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 import asmCodeGenerator.codeStorage.ASMOpcode;
+import asmCodeGenerator.runtime.MemoryManager;
 import asmCodeGenerator.runtime.RunTime;
 import asmCodeGenerator.Header;
 import lexicalAnalyzer.Lextant;
@@ -57,10 +58,11 @@ public class ASMCodeGenerator {
 	public ASMCodeFragment makeASM() {
 		ASMCodeFragment code = new ASMCodeFragment(GENERATES_VOID);
 		
+		code.append( MemoryManager.codeForInitialization());
 		code.append( RunTime.getEnvironment() );
 		code.append( globalVariableBlockASM() );
 		code.append( programASM() );
-//		code.append( MemoryManager.codeForAfterApplication() );
+		code.append( MemoryManager.codeForAfterApplication() );
 		
 		return code;
 	}
@@ -368,6 +370,8 @@ public class ASMCodeGenerator {
 				visitComparisonOperatorNode(node, operator);
 			} else if(isBooleanOperator(operator)) {
 				visitBooleanOperatorNode(node,operator);
+			} else if(isStringConcatenation(node,operator)) {
+				visitStringConcatenationNode(node,operator);
 			}
 			else if(operator==Punctuator.CAST) {
 				visitCastingOperatorNode(node);
@@ -600,6 +604,35 @@ public class ASMCodeGenerator {
 
 		}
 			
+		// strin concatenation
+		private boolean isStringConcatenation(BinaryOperatorNode node, Lextant operator) {
+			return operator == Punctuator.ADD && node.getType() == PrimitiveType.STRING;
+		}
+		private void visitStringConcatenationNode(BinaryOperatorNode node, Lextant operator) {
+			assert isStringConcatenation(node, operator);
+			newValueCode(node);
+			
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));	
+			ASMCodeFragment arg2 = removeValueCode(node.child(1));	
+			
+			code.append(arg1);									// [...arg1]
+			code.append(arg2);									// [...arg1 arg2]
+
+			code.add(PushD, RunTime.STRING_CONCA_ARG2);			// [...arg1 arg2 arg2_addr]
+			code.add(Exchange); 								// [...arg1 arg2_addr arg2]
+			code.add(StoreI); 									// [...arg1]
+			code.add(PushD, RunTime.STRING_CONCA_ARG1);			// [...arg1 arg1_addr]
+			code.add(Exchange); 								// [...arg1_addr arg1]
+			code.add(StoreI); 									// [...]
+			// NO ANY opcode can be further added below
+			code.add(PushPC);									// [...currentAddress]	currentAddress
+			code.add(PushI, 3);
+			code.add(Add);										// [...R]	ReturnAddr = currentAddr + 3
+			code.add(Jump, RunTime.STRING_CONCATENATION);
+			
+		}
+
+		
 		// nomal binary operator
 		private void visitNormalBinaryOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);

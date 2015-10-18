@@ -16,7 +16,7 @@ public class Header {
 	
 	private int getStatusCode(StringConstantNode node) {
 		int StatusCode = 0;
-		StatusCode += 0;		//set immutability to 0
+		StatusCode += 1;			//set immutability to 1
 		StatusCode += 0 * 2;		//set subtype-is-reference to 0
 		StatusCode += 1 * 4;		//set do-not-diopose to 1
 		
