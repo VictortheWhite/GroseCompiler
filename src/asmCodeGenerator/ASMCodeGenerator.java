@@ -5,23 +5,29 @@ import java.util.Map;
 
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 import asmCodeGenerator.codeStorage.ASMOpcode;
+import asmCodeGenerator.runtime.MemoryManager;
 import asmCodeGenerator.runtime.RunTime;
+import asmCodeGenerator.Header;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
 import parseTree.nodeTypes.BinaryOperatorNode;
+import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.CharacterConstantNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
 import parseTree.nodeTypes.FloatingConstantNode;
 import parseTree.nodeTypes.IdentifierNode;
+import parseTree.nodeTypes.IfStatementNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.NewlineNode;
 import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
+import parseTree.nodeTypes.UnaryOperatorNode;
+import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
@@ -33,6 +39,7 @@ import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 // do not call the code generator if any errors have occurred during analysis.
 public class ASMCodeGenerator {
 	private static Labeller labeller = new Labeller();
+	private static Header header = new Header();
 
 	ParseNode root;
 
@@ -51,10 +58,11 @@ public class ASMCodeGenerator {
 	public ASMCodeFragment makeASM() {
 		ASMCodeFragment code = new ASMCodeFragment(GENERATES_VOID);
 		
+		code.append( MemoryManager.codeForInitialization());
 		code.append( RunTime.getEnvironment() );
 		code.append( globalVariableBlockASM() );
 		code.append( programASM() );
-//		code.append( MemoryManager.codeForAfterApplication() );
+		code.append( MemoryManager.codeForAfterApplication() );
 		
 		return code;
 	}
@@ -187,6 +195,14 @@ public class ASMCodeGenerator {
 				code.append(childCode);
 			}
 		}
+		public void visitLeave(BlockNode node)	{
+			newVoidCode(node);
+			for(ParseNode child: node.getChildren()) {
+				ASMCodeFragment childCode = removeVoidCode(child);
+				code.append(childCode);
+			}
+		}
+		
 
 		///////////////////////////////////////////////////////////////////////////
 		// statements and declarations
@@ -220,6 +236,7 @@ public class ASMCodeGenerator {
 
 			code.append(removeValueCode(node));
 			convertToStringIfBoolean(node);
+			addAddressOffestIfString(node);
 			code.add(PushD, format);
 			code.add(Printf);
 		}
@@ -238,6 +255,15 @@ public class ASMCodeGenerator {
 			code.add(PushD, RunTime.BOOLEAN_TRUE_STRING);
 			code.add(Label, endLabel);
 		}		
+		private void addAddressOffestIfString(ParseNode node) {
+			if(node.getType() != PrimitiveType.STRING) {
+				return;
+			}
+			
+			code.add(PushI, 13);
+			code.add(Add);
+		}
+
 		private String printFormat(Type type) {
 			assert type instanceof PrimitiveType;
 			
@@ -295,15 +321,59 @@ public class ASMCodeGenerator {
 			return null;
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		// control flows statements------ if while and for
+		public void visitLeave(IfStatementNode node) {
+			newVoidCode(node);
+			ASMCodeFragment condition = removeValueCode(node.child(0));
+			ASMCodeFragment TrueBlock = removeVoidCode(node.child(1));
+			
+			String startsElseBlockLabel = labeller.newLabel("else-block-start", ""); 
+			String endIfElseStatementLabel = labeller.newLabelSameNumber("if-else-stmt-end", "");
+
+			
+			code.append(condition);
+			code.add(JumpFalse, startsElseBlockLabel);
+			code.append(TrueBlock);
+			code.add(Jump, endIfElseStatementLabel);
+			code.add(Label, startsElseBlockLabel);
+			if(node.getChildren().size()==3) {
+				ASMCodeFragment ElseBlock = removeVoidCode(node.child(2));
+				code.append(ElseBlock);
+			}				
+			code.add(Label, endIfElseStatementLabel);
+
+		}
+		
+		public void visitLeave(WhileStatementNode node) {
+			newVoidCode(node);
+			ASMCodeFragment condition = removeValueCode(node.child(0));
+			ASMCodeFragment Block = removeVoidCode(node.child(1));
+			
+			String startsLoopLabel = labeller.newLabel("while-loop-start", ""); 
+			String endsLoopLabel = labeller.newLabelSameNumber("while-loop-end", "");
+			
+			code.add(Label, startsLoopLabel);
+			code.append(condition);
+			code.add(JumpFalse, endsLoopLabel);
+			code.append(Block);
+			code.add(Jump, startsLoopLabel);
+			code.add(Label, endsLoopLabel);
+		}
 
 		///////////////////////////////////////////////////////////////////////////
-		// expressions
+		// expressions --------Binary operator
 		public void visitLeave(BinaryOperatorNode node) {
 			Lextant operator = node.getOperator();
 
 			if(isComparisonOperator(operator)) {
 				visitComparisonOperatorNode(node, operator);
-			} else if(operator==Punctuator.CAST) {
+			} else if(isBooleanOperator(operator)) {
+				visitBooleanOperatorNode(node,operator);
+			} else if(isStringConcatenation(node,operator)) {
+				visitStringConcatenationNode(node,operator);
+			}
+			else if(operator==Punctuator.CAST) {
 				visitCastingOperatorNode(node);
 			}
 			else {
@@ -315,9 +385,8 @@ public class ASMCodeGenerator {
 					|| operator==Punctuator.LESSOFEQUAL || operator==Punctuator.EQUAL || operator==Punctuator.NOTEQUAL;
 		}
 		
-		//comparison operator
-		private void visitComparisonOperatorNode(BinaryOperatorNode node,
-				Lextant operator) {
+		// comparison operator
+		private void visitComparisonOperatorNode(BinaryOperatorNode node, Lextant operator) {
 			
 			
 			
@@ -494,6 +563,76 @@ public class ASMCodeGenerator {
 
 		}
 		
+		// boolean operator
+		private boolean isBooleanOperator(Lextant operator) {
+			return operator==Punctuator.BOOLEANAND || operator==Punctuator.BOOLEANOR;
+		}
+		private void visitBooleanOperatorNode(BinaryOperatorNode node, Lextant operator) {
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			ASMCodeFragment arg2 = removeValueCode(node.child(1));
+			String falseLabel = labeller.newLabel("boolean-binary-operator-false", "");
+			String trueLabel = labeller.newLabelSameNumber("boolean-binary-operator-true", "");
+			String joinLabel = labeller.newLabelSameNumber("boolean-binary-operator-join", "");
+			newValueCode(node);
+			
+			//examine arg1
+			code.append(arg1);
+			if(operator == Punctuator.BOOLEANAND) {
+				code.add(JumpFalse, falseLabel);
+			} else if(operator == Punctuator.BOOLEANOR) {
+				code.add(JumpTrue, trueLabel);
+			}			
+			
+			//examine arg2
+			code.append(arg2);
+			if(operator == Punctuator.BOOLEANAND) {
+				code.add(JumpFalse, falseLabel);
+			} else if(operator == Punctuator.BOOLEANOR) {
+				code.add(JumpTrue, trueLabel);
+				code.add(Jump, falseLabel);
+			}
+			
+			code.add(Label, trueLabel);
+			code.add(PushI, 1);
+			code.add(Jump, joinLabel);
+			code.add(Label, falseLabel);
+			code.add(PushI, 0);
+			code.add(Jump, joinLabel);
+			code.add(Label, joinLabel);
+
+			
+
+		}
+			
+		// strin concatenation
+		private boolean isStringConcatenation(BinaryOperatorNode node, Lextant operator) {
+			return operator == Punctuator.ADD && node.getType() == PrimitiveType.STRING;
+		}
+		private void visitStringConcatenationNode(BinaryOperatorNode node, Lextant operator) {
+			assert isStringConcatenation(node, operator);
+			newValueCode(node);
+			
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));	
+			ASMCodeFragment arg2 = removeValueCode(node.child(1));	
+			
+			code.append(arg1);									// [...arg1]
+			code.append(arg2);									// [...arg1 arg2]
+
+			code.add(PushD, RunTime.STRING_CONCA_ARG2);			// [...arg1 arg2 arg2_addr]
+			code.add(Exchange); 								// [...arg1 arg2_addr arg2]
+			code.add(StoreI); 									// [...arg1]
+			code.add(PushD, RunTime.STRING_CONCA_ARG1);			// [...arg1 arg1_addr]
+			code.add(Exchange); 								// [...arg1_addr arg1]
+			code.add(StoreI); 									// [...]
+			// NO ANY opcode can be further added below
+			code.add(PushPC);									// [...currentAddress]	currentAddress
+			code.add(PushI, 3);
+			code.add(Add);										// [...R]	ReturnAddr = currentAddr + 3
+			code.add(Jump, RunTime.STRING_CONCATENATION);
+			
+		}
+
+		
 		// nomal binary operator
 		private void visitNormalBinaryOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);
@@ -604,6 +743,33 @@ public class ASMCodeGenerator {
 				return;
 		}
 		
+		// expressions --------Binary operator
+		public void visitLeave(UnaryOperatorNode node) {
+			Lextant operator = node.getOperator();
+			if(operator == Punctuator.BOOLEANCOMPLIMENT) {
+				visitBooleanComplimentNode(node, operator);
+			}
+		}
+		public void visitBooleanComplimentNode(UnaryOperatorNode node, Lextant operator) {
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			String falseLabel = labeller.newLabel("boolean-binary-operator-false", "");
+			String trueLabel = labeller.newLabelSameNumber("boolean-binary-operator-true", "");
+			String joinLabel = labeller.newLabelSameNumber("boolean-binary-operator-join", "");
+			
+			newValueCode(node);
+			
+			code.append(arg1);
+			code.add(JumpTrue, falseLabel);
+			
+			code.add(Label, trueLabel);
+			code.add(PushI, 1);
+			code.add(Jump, joinLabel);
+			code.add(Label, falseLabel);
+			code.add(PushI, 0);
+			code.add(Jump, joinLabel);
+			code.add(Label, joinLabel);
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
 		public void visit(BooleanConstantNode node) {
@@ -635,7 +801,9 @@ public class ASMCodeGenerator {
 			newValueCode(node);
 			
 			String stringLabel = labeller.newLabel("$string-constant", "");
+			
 			code.add(DLabel, stringLabel);
+			header.addHeader(code, node);
 			code.add(DataS, node.getValue());
 			code.add(PushD, stringLabel);
 		}
