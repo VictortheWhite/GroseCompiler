@@ -78,6 +78,7 @@ public class RunTime {
 		frag.add(DLabel, STRING_CONCA_ARG2);		// memory location reserved for arg2
 		frag.add(DataI, 0);
 		
+		
 		frag.add(Label, STRING_CONCATENATION);		// [...R]	concatenation start (R being return address)
 		
 		// calculate length(C) 
@@ -202,7 +203,7 @@ public class RunTime {
 		frag.add(PushI, 0);
 		frag.add(StoreC); 							// [...R C]
 		frag.add(Exchange); 						// [...C R]
-		frag.add(PopPC);
+		frag.add(PopPC);							// return
 		return frag;
 	}
 	

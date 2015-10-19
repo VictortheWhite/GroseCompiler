@@ -624,11 +624,7 @@ public class ASMCodeGenerator {
 			code.add(PushD, RunTime.STRING_CONCA_ARG1);			// [...arg1 arg1_addr]
 			code.add(Exchange); 								// [...arg1_addr arg1]
 			code.add(StoreI); 									// [...]
-			// NO ANY opcode can be further added below
-			code.add(PushPC);									// [...currentAddress]	currentAddress
-			code.add(PushI, 3);
-			code.add(Add);										// [...R]	ReturnAddr = currentAddr + 3
-			code.add(Jump, RunTime.STRING_CONCATENATION);
+			code.add(Call, RunTime.STRING_CONCATENATION);		// [...R] 	R being return address(current PC +1)
 			
 		}
 
