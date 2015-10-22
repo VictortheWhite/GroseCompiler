@@ -306,6 +306,7 @@ public class Parser {
 	// expr4 -> literal
 	//			parenthesis
 	//			length
+	//			[exprList]
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr0
@@ -421,14 +422,6 @@ public class Parser {
 		}
 		
 		ParseNode left = parseExpression7over2();
-		/*
-		while(nowReading.isLextant(Punctuator.MULTIPLY)) {
-			Token multiplicativeToken = nowReading;
-			readToken();
-			ParseNode right = parseExpression4();
-			
-			left = BinaryOperatorNode.withChildren(multiplicativeToken, left, right);
-		}*/
 		while(true){
 			if(nowReading.isLextant(Punctuator.MULTIPLY)) {
 				Token multiplicativeToken = nowReading;
@@ -514,7 +507,7 @@ public class Parser {
 		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT);
 	}
 	
-	// expr4 -> literal | parenthesis |length
+	// expr4 -> literal | parenthesis | length | populated_Array
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {
 			return syntaxErrorNode("expression<4>");
@@ -523,13 +516,16 @@ public class Parser {
 			return parseLiteral();
 		else if(startsParenthesis(nowReading))
 			return parseParenthesis();
+		else if(startsPopulatedArray(nowReading)) 
+			return parsePopulatedArray();
 		else if(startsLengthOperation(nowReading))
 			return parseLength();
 		
 		return syntaxErrorNode("expression<4>");
 	}
 	private boolean startsExpression4(Token token) {
-		return startsLiteral(token) || startsParenthesis(token) || startsLengthOperation(token);
+		return startsLiteral(token) || startsParenthesis(token) 
+				|| startsLengthOperation(token) || startsPopulatedArray(token);
 	}
 
 	// Parenthesis
@@ -544,6 +540,36 @@ public class Parser {
 	}
 	private boolean startsParenthesis(Token token) {
 		return token.isLextant(Punctuator.OPEN_PARENTHESIS);
+	}
+	// populated array creation
+	private ParseNode parsePopulatedArray() {
+		if(!startsPopulatedArray(nowReading)) {
+			return syntaxErrorNode("populated array creation");
+		}
+		PopulatedArrayNode result = new PopulatedArrayNode(nowReading);
+		
+		readToken();
+		result = (PopulatedArrayNode)parseExpressionList(result);
+		
+		expect(Punctuator.CLOSE_SQUARE_BRACKET);
+		return result;
+		
+		
+	}
+	private ParseNode parseExpressionList(ParseNode node) {
+		ParseNode newExpr = parseExpression();
+		node.appendChild(newExpr);
+		while(nowReading.isLextant(Punctuator.SEPARATOR)) {
+			readToken();
+			newExpr = parseExpression();
+			node.appendChild(newExpr);
+		}
+		
+		return node;
+	}
+	
+	private boolean startsPopulatedArray(Token token) {
+		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET);
 	}
 	
 	// length

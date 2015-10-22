@@ -8,9 +8,9 @@ import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
 import parseTree.nodeTypes.*;
-import parseTree.nodeTypes.UnaryOperatorNode;
 import semanticAnalyzer.signatures.FunctionSignature;
 import semanticAnalyzer.signatures.FunctionSignatures;
+import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
@@ -170,6 +170,18 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		return token.getLextant();
 	}
 	
+	// populated array creation
+	public void visitLeave(PopulatedArrayNode node) {
+		assert node.nChildren() >=1;
+		Type childType = node.child(0).getType();
+		for(int i = 1; i < node.nChildren(); i++) {
+			if(node.child(i).getType() != childType) 
+				populatedArrayTypeCheckError(node, childType);
+		}
+		ArrayType arrayType = new ArrayType(childType);
+		node.setType(arrayType);
+	}
+	
 
 	
 
@@ -244,6 +256,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	private void reassignImmutableError(ParseNode node, String identifier) {		
 		logError("Immutable identifier (" + identifier +") cannot be reassigned");
+	}
+	private void populatedArrayTypeCheckError(ParseNode node, Type ...types) {
+		Token token = node.getToken();
+		String errorMessage = "populated array creation requires same types in expression list: ";
+		
+		logError(errorMessage + types + token.getLocation());
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

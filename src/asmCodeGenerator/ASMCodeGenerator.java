@@ -23,6 +23,7 @@ import parseTree.nodeTypes.IdentifierNode;
 import parseTree.nodeTypes.IfStatementNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.NewlineNode;
+import parseTree.nodeTypes.PopulatedArrayNode;
 import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
@@ -30,6 +31,7 @@ import parseTree.nodeTypes.StringConstantNode;
 import parseTree.nodeTypes.UnaryOperatorNode;
 import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
+import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
@@ -316,6 +318,9 @@ public class ASMCodeGenerator {
 				return StoreC;
 			}
 			if(type == PrimitiveType.STRING) {
+				return StoreI;
+			}
+			if(type instanceof ArrayType) {
 				return StoreI;
 			}
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
@@ -778,6 +783,49 @@ public class ASMCodeGenerator {
 			code.add(LoadI);
 		}
 		
+		// expression -----------Populated Array Creation
+		public void visitLeave(PopulatedArrayNode node) {
+			int subTypeSize = ((ArrayType)node.getType()).getSubType().getSize();
+			int length = node.nChildren();
+			ASMOpcode storeOpcode = null;
+			switch(subTypeSize) {
+				case 1 : storeOpcode = ASMOpcode.StoreC; break;
+				case 4 : storeOpcode = ASMOpcode.StoreI; break;
+				case 8 : storeOpcode = ASMOpcode.StoreF; break;
+			}
+			assert storeOpcode != null;
+			
+			newValueCode(node);
+			
+			code.add(PushI, subTypeSize * length + 17);			// bytes of array
+			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE); // allocate memory	[...adr]
+			
+			header.addHeader(code, node);				// this method adds header to array, when returns, the adr still on the top of stack [...adr]
+			addElementsToArray(code, storeOpcode, subTypeSize, length, node);
+			
+		}
+		
+		private void addElementsToArray(ASMCodeFragment code, ASMOpcode storeOpcode, int subTypeSize, int length, ParseNode node) {
+			code.add(Duplicate);	// [adr adr]
+			code.add(PushI, 17);	
+			code.add(Add);			// [adr adr*]	adr* = adr + 17
+			
+			// add element start
+			ASMCodeFragment childCode = null;
+			for(int i = 0; i < length; i++) {
+				childCode = removeValueCode(node.child(i));
+				code.add(Duplicate);
+				code.append(childCode);
+				code.add(storeOpcode);
+				
+				code.add(PushI, subTypeSize);
+				code.add(Add);
+			}
+			
+			code.add(Pop);
+			
+			
+		}
 		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
