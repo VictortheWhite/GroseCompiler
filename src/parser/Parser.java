@@ -305,6 +305,7 @@ public class Parser {
 	// exprUnaryOp -> [!|copy]* expr4 
 	// expr4 -> literal
 	//			parenthesis
+	//			length
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr0
@@ -513,24 +514,29 @@ public class Parser {
 		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT);
 	}
 	
-	// expr4 -> literal | parenthesis
+	// expr4 -> literal | parenthesis |length
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {
 			return syntaxErrorNode("expression<4>");
 		}
 		if(startsLiteral(nowReading))
 			return parseLiteral();
-		else if(startsParenthesis(nowReading)) {
+		else if(startsParenthesis(nowReading))
 			return parseParenthesis();
-		}
+		else if(startsLengthOperation(nowReading))
+			return parseLength();
+		
 		return syntaxErrorNode("expression<4>");
 	}
 	private boolean startsExpression4(Token token) {
-		return startsLiteral(token) || startsParenthesis(token);
+		return startsLiteral(token) || startsParenthesis(token) || startsLengthOperation(token);
 	}
 
 	// Parenthesis
 	private ParseNode parseParenthesis() {
+		if(!startsParenthesis(nowReading)) {
+			return syntaxErrorNode("Parenthesis");
+		}
 		readToken();
 		ParseNode right = parseExpression();
 		expect(Punctuator.CLOSE_PARENTHESIS);
@@ -538,6 +544,21 @@ public class Parser {
 	}
 	private boolean startsParenthesis(Token token) {
 		return token.isLextant(Punctuator.OPEN_PARENTHESIS);
+	}
+	
+	// length
+	private ParseNode parseLength() {
+		if(!startsLengthOperation(nowReading)) {
+			return syntaxErrorNode("Length opreation");
+		}
+		Token lengthOpreator = nowReading;
+		readToken();
+		ParseNode left = parseExpression();
+		expect(Punctuator.BAR);
+		return LengthOperatorNode.withChildren(lengthOpreator, left);
+	}
+	private boolean startsLengthOperation(Token token) {
+		return token.isLextant(Punctuator.BAR);
 	}
 	
 	// literal -> number | identifier | booleanConstant

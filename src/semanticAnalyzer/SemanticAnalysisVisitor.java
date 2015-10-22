@@ -131,11 +131,6 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 	}
-	private Lextant operatorFor(ParseNode node) {
-		LextantToken token = (LextantToken) node.getToken();
-		return token.getLextant();
-	}
-	
 	@Override
 	public void visitLeave(UnaryOperatorNode node) {
 		assert node.nChildren()==1;
@@ -153,6 +148,31 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 	}
+	@Override
+	public void visitLeave(LengthOperatorNode node) {
+		assert node.nChildren()	==1;
+		ParseNode SingleChild = node.child(0);
+		List<Type> childTypes = Arrays.asList(SingleChild.getType());
+		
+		Lextant operator = operatorFor(node); 
+		FunctionSignature signature = FunctionSignatures.signature(operator, childTypes);
+		
+		if(signature.accepts(childTypes)) {
+			node.setType(signature.resultType());
+		} 
+		else {
+			typeCheckError(node, childTypes);
+			node.setType(PrimitiveType.ERROR);
+		}
+	}
+	private Lextant operatorFor(ParseNode node) {
+		LextantToken token = (LextantToken) node.getToken();
+		return token.getLextant();
+	}
+	
+
+	
+
 
 
 	///////////////////////////////////////////////////////////////////////////

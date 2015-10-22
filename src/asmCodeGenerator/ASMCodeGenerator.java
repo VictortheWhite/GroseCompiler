@@ -15,6 +15,7 @@ import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.LengthOperatorNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
 import parseTree.nodeTypes.FloatingConstantNode;
@@ -765,6 +766,18 @@ public class ASMCodeGenerator {
 			code.add(Jump, joinLabel);
 			code.add(Label, joinLabel);
 		}
+		
+		// expression ------------------- length
+		public void visitLeave(LengthOperatorNode node) {
+			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			newValueCode(node);
+			
+			code.append(arg1);
+			code.add(PushI, 9);
+			code.add(Add);
+			code.add(LoadI);
+		}
+		
 		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
