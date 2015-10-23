@@ -174,8 +174,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visitLeave(PopulatedArrayNode node) {
 		assert node.nChildren() >=1;
 		Type childType = node.child(0).getType();
-		for(int i = 1; i < node.nChildren(); i++) {
-			if(node.child(i).getType() != childType) 
+		for(ParseNode child : node.getChildren()) {
+			if(!child.getType().equals(childType)) 
 				populatedArrayTypeCheckError(node, childType);
 		}
 		ArrayType arrayType = new ArrayType(childType);
@@ -257,11 +257,11 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	private void reassignImmutableError(ParseNode node, String identifier) {		
 		logError("Immutable identifier (" + identifier +") cannot be reassigned");
 	}
-	private void populatedArrayTypeCheckError(ParseNode node, Type ...types) {
+	private void populatedArrayTypeCheckError(ParseNode node, Type type) {
 		Token token = node.getToken();
 		String errorMessage = "populated array creation requires same types in expression list: ";
 		
-		logError(errorMessage + types + token.getLocation());
+		logError(errorMessage + type.infoString() + token.getLocation());
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

@@ -170,6 +170,9 @@ public class ASMCodeGenerator {
 			else if(node.getType() == PrimitiveType.STRING) {
 				code.add(LoadI);
 			}
+			else if(node.getType() instanceof ArrayType) {
+				code.add(LoadI);
+			}
 			else {
 				assert false : "node " + node;
 			}
@@ -219,7 +222,10 @@ public class ASMCodeGenerator {
 					code.append(childCode);
 				}
 				else {
-					appendPrintCode(child);
+					if(child.getType() instanceof ArrayType)
+						appendPrintArrayCode(child);
+					else 
+						appendPrintCode(child);
 				}
 			}
 		}
@@ -235,16 +241,74 @@ public class ASMCodeGenerator {
 			code.add(Printf);
 		}
 		private void appendPrintCode(ParseNode node) {
+			
+			System.out.println(node);
+			System.out.println(node.getType());
 			String format = printFormat(node.getType());
 
 			code.append(removeValueCode(node));
-			convertToStringIfBoolean(node);
-			addAddressOffestIfString(node);
+			convertToStringIfBoolean(node.getType());
+			addAddressOffestIfString(node.getType());
 			code.add(PushD, format);
 			code.add(Printf);
 		}
-		private void convertToStringIfBoolean(ParseNode node) {
-			if(node.getType() != PrimitiveType.BOOLEAN) {
+		// print array
+		private void appendPrintArrayCode(ParseNode node) {
+			ArrayType nodeType = (ArrayType)node.getType();
+			String format = printFormat(nodeType.getSubType());
+			ASMOpcode loadOpcode = LoadArrayOpcode(nodeType.getSubType());
+			int subTypeSize = nodeType.getSubTypeSize();
+			String startLoopLabel = labeller.newLabel("printing-array-loop-start", "");
+			String endLoopLabel = labeller.newLabelSameNumber("printing-array-loop-end", "");
+			code.append(removeValueCode(node));			// [...adr]
+			
+			code.add(PushI, 91);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							// print '['
+			
+			code.add(Duplicate);				
+			code.add(PushI, 13);
+			code.add(Add);
+			code.add(LoadI);							// [...adr n]
+			code.add(Exchange);
+			code.add(PushI,17);
+			code.add(Add);
+			code.add(Exchange);							// [...adr* n]	adr* is now address of element to print
+			
+			// if length ==0 , just let go
+			code.add(Duplicate);
+			code.add(JumpFalse, endLoopLabel);
+			//else
+			code.add(Label, startLoopLabel);
+			code.add(Exchange);							// [..n adr*]
+			code.add(Duplicate);
+			code.add(loadOpcode);
+			convertToStringIfBoolean(nodeType.getSubType());	
+			addAddressOffestIfString(nodeType.getSubType());
+			code.add(PushD, format);
+			System.out.println(format);
+			code.add(Printf);
+			code.add(PushI, subTypeSize);
+			code.add(Add);								// adr* += subTypeSize
+			code.add(Exchange);
+			code.add(PushI, -1);
+			code.add(Add);								// [...adr* n]		n--
+			code.add(Duplicate);
+			code.add(JumpFalse, endLoopLabel);
+			code.add(PushI, 32);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							// print space
+			code.add(Jump, startLoopLabel);				
+			code.add(Label,endLoopLabel);				// [...adr* n]
+			code.add(Pop);
+			code.add(Pop);
+			
+			code.add(PushI, 93);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);
+		}
+		private void convertToStringIfBoolean(Type type) {
+			if(type != PrimitiveType.BOOLEAN) {
 				return;
 			}
 			
@@ -258,18 +322,20 @@ public class ASMCodeGenerator {
 			code.add(PushD, RunTime.BOOLEAN_TRUE_STRING);
 			code.add(Label, endLabel);
 		}		
-		private void addAddressOffestIfString(ParseNode node) {
-			if(node.getType() != PrimitiveType.STRING) {
+		private void addAddressOffestIfString(Type type) {
+			if(type != PrimitiveType.STRING) {
 				return;
 			}
 			
 			code.add(PushI, 13);
 			code.add(Add);
 		}
-
 		private String printFormat(Type type) {
-			assert type instanceof PrimitiveType;
+			if(type instanceof ArrayType) {
+				return RunTime.INTEGER_PRINT_FORMAT;
+			}
 			
+			assert type instanceof PrimitiveType;
 			switch((PrimitiveType)type) {
 			case INTEGER:	return RunTime.INTEGER_PRINT_FORMAT;
 			case BOOLEAN:	return RunTime.BOOLEAN_PRINT_FORMAT;
@@ -281,6 +347,24 @@ public class ASMCodeGenerator {
 				return "";
 			}
 		}
+		private ASMOpcode LoadArrayOpcode(Type type) {
+			if(type instanceof ArrayType) {
+				return LoadI;
+			}
+			
+			assert type instanceof PrimitiveType;
+			switch((PrimitiveType)type) {
+			case INTEGER:	return LoadI;
+			case BOOLEAN:	return LoadC;
+			case FLOATING:	return LoadF;
+			case CHARACTER:	return LoadC;
+			case STRING:	return LoadI;
+			default:		
+				assert false : "Type " + type + " unimplemented in ASMCodeGenerator.LoadArrayOpcode()";
+				return null;
+			}
+		}
+		//-------------------------------------------------------
 		// Declaration and Reassignment
 		public void visitLeave(DeclarationNode node) {
 			newVoidCode(node);
@@ -785,7 +869,7 @@ public class ASMCodeGenerator {
 		
 		// expression -----------Populated Array Creation
 		public void visitLeave(PopulatedArrayNode node) {
-			int subTypeSize = ((ArrayType)node.getType()).getSubType().getSize();
+			int subTypeSize = ((ArrayType)node.getType()).getSubTypeSize();
 			int length = node.nChildren();
 			ASMOpcode storeOpcode = null;
 			switch(subTypeSize) {
@@ -801,23 +885,23 @@ public class ASMCodeGenerator {
 			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE); // allocate memory	[...adr]
 			
 			header.addHeader(code, node);				// this method adds header to array, when returns, the adr still on the top of stack [...adr]
-			addElementsToArray(code, storeOpcode, subTypeSize, length, node);
+			addElementsToArray(code, storeOpcode, subTypeSize, node);
 			
 		}
 		
-		private void addElementsToArray(ASMCodeFragment code, ASMOpcode storeOpcode, int subTypeSize, int length, ParseNode node) {
+		private void addElementsToArray(ASMCodeFragment code, ASMOpcode storeOpcode, int subTypeSize, ParseNode node) {
 			code.add(Duplicate);	// [adr adr]
 			code.add(PushI, 17);	
 			code.add(Add);			// [adr adr*]	adr* = adr + 17
 			
 			// add element start
 			ASMCodeFragment childCode = null;
-			for(int i = 0; i < length; i++) {
-				childCode = removeValueCode(node.child(i));
+			for(ParseNode child : node.getChildren()) {
+				childCode = removeValueCode(child);
 				code.add(Duplicate);
 				code.append(childCode);
 				code.add(storeOpcode);
-				
+				System.out.println(storeOpcode);
 				code.add(PushI, subTypeSize);
 				code.add(Add);
 			}

@@ -51,7 +51,7 @@ public class Header {
 		code.add(ASMOpcode.Add);							// [...adr adr+9]
 		
 		code.add(ASMOpcode.Duplicate);
-		code.add(ASMOpcode.PushI, ((ArrayType)node.getType()).getSubType().getSize());	// 4bytes, size of subType
+		code.add(ASMOpcode.PushI, ((ArrayType)node.getType()).getSubTypeSize());	// 4bytes, size of subType
 		code.add(ASMOpcode.StoreI);
 		code.add(ASMOpcode.PushI, 4);
 		code.add(ASMOpcode.Add);							// [...adr adr+13]
