@@ -179,6 +179,7 @@ public class ASMCodeGenerator {
 			code.markAsValue();
 		}
 		
+		
 	    ////////////////////////////////////////////////////////////////////
         // ensures all types of ParseNode in given AST have at least a visitLeave	
 		public void visitLeave(ParseNode node) {
@@ -229,7 +230,7 @@ public class ASMCodeGenerator {
 				}
 			}
 		}
-
+		
 		public void visit(NewlineNode node) {
 			newVoidCode(node);
 			code.add(PushD, RunTime.NEWLINE_PRINT_FORMAT);
@@ -255,12 +256,14 @@ public class ASMCodeGenerator {
 		// print array
 		private void appendPrintArrayCode(ParseNode node) {
 			ArrayType nodeType = (ArrayType)node.getType();
-			String format = printFormat(nodeType.getSubType());
-			ASMOpcode loadOpcode = LoadArrayOpcode(nodeType.getSubType());
-			int subTypeSize = nodeType.getSubTypeSize();
+			code.append(removeValueCode(node));			// [...adr]
+			printArray(nodeType);
+		}
+		private void printArray(ArrayType type) {
+			ASMOpcode loadOpcode = LoadArrayOpcode(type.getSubType());
+			int subTypeSize = type.getSubTypeSize();
 			String startLoopLabel = labeller.newLabel("printing-array-loop-start", "");
 			String endLoopLabel = labeller.newLabelSameNumber("printing-array-loop-end", "");
-			code.append(removeValueCode(node));			// [...adr]
 			
 			code.add(PushI, 91);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
@@ -281,13 +284,23 @@ public class ASMCodeGenerator {
 			//else
 			code.add(Label, startLoopLabel);
 			code.add(Exchange);							// [..n adr*]
-			code.add(Duplicate);
-			code.add(loadOpcode);
-			convertToStringIfBoolean(nodeType.getSubType());	
-			addAddressOffestIfString(nodeType.getSubType());
-			code.add(PushD, format);
-			System.out.println(format);
-			code.add(Printf);
+			code.add(Duplicate);						
+			code.add(loadOpcode);						// [...n adr* val]
+
+			/* if subType is array
+			 * 		recursively print array
+			 * else
+			 * 		print element
+			 */
+			if(type.getSubType() instanceof ArrayType) {
+				printArray((ArrayType)type.getSubType());
+			}
+			else {
+				convertToStringIfBoolean(type.getSubType());	
+				addAddressOffestIfString(type.getSubType());
+				code.add(PushD, printFormat(type.getSubType()));
+				code.add(Printf);
+			}	
 			code.add(PushI, subTypeSize);
 			code.add(Add);								// adr* += subTypeSize
 			code.add(Exchange);
@@ -295,9 +308,12 @@ public class ASMCodeGenerator {
 			code.add(Add);								// [...adr* n]		n--
 			code.add(Duplicate);
 			code.add(JumpFalse, endLoopLabel);
-			code.add(PushI, 32);
+			code.add(PushI, 44);						// print ','
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
-			code.add(Printf);							// print space
+			code.add(Printf);
+			code.add(PushI, 32);						// print space
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							
 			code.add(Jump, startLoopLabel);				
 			code.add(Label,endLoopLabel);				// [...adr* n]
 			code.add(Pop);
@@ -330,11 +346,7 @@ public class ASMCodeGenerator {
 			code.add(PushI, 13);
 			code.add(Add);
 		}
-		private String printFormat(Type type) {
-			if(type instanceof ArrayType) {
-				return RunTime.INTEGER_PRINT_FORMAT;
-			}
-			
+		private String printFormat(Type type) {		
 			assert type instanceof PrimitiveType;
 			switch((PrimitiveType)type) {
 			case INTEGER:	return RunTime.INTEGER_PRINT_FORMAT;
@@ -497,11 +509,7 @@ public class ASMCodeGenerator {
 			code.add(Label, arg2Label);
 			code.append(arg2);
 			code.add(Label, subLabel);
-			
-
-			
-//			code.add(JumpPos, trueLabel);
-			//OldAddJumpInstruction(childType, operator, trueLabel, falseLabel);
+						
 			addSubstractionAndJumpInstruction(childType, operator, trueLabel, falseLabel);
 			
 			code.add(Label, trueLabel);
@@ -572,87 +580,7 @@ public class ASMCodeGenerator {
 			}
 
 		}
-		@SuppressWarnings("unused")
-		private void OldAddJumpInstruction(Type childType, Lextant operator, String trueLabel, String falseLabel) {
-			
-			if(childType == PrimitiveType.INTEGER || childType == PrimitiveType.CHARACTER || childType == PrimitiveType.BOOLEAN)
-				code.add(Subtract);
-			else if(childType == PrimitiveType.FLOATING)
-				code.add(FSubtract);
-			
-			if(operator == Punctuator.GREATEROFEQUAL) {
-				code.add(ASMOpcode.Duplicate);
-				String compareGreater = labeller.newLabelSameNumber("-compare-greater-for-GREATEREQUAL-Compare-", "");
-				if(childType == PrimitiveType.INTEGER) {
-					code.add(JumpPos, compareGreater);
-					code.add(Pop);
-					code.add(Jump, falseLabel);
-
-					code.add(Label,compareGreater);
-					code.add(ASMOpcode.JumpFalse, trueLabel);	//jump when arg1 == arg2	
-				} else if(childType == PrimitiveType.FLOATING) {
-					
-						code.add(JumpFPos, compareGreater);
-						code.add(Pop);
-						code.add(Jump, falseLabel);
-
-						code.add(Label,compareGreater);
-						code.add(ASMOpcode.JumpFZero, trueLabel);	//jump when arg1 == arg2	
-				}
-				
-			} else if(operator == Punctuator.LESSOFEQUAL) {
-				code.add(ASMOpcode.Duplicate);
-				String compareEqual = labeller.newLabelSameNumber("-compare-equal-for-LESSEQUAL-Compare-", "");
-				String popDuplicate = labeller.newLabelSameNumber("compare-pop-duplicate-for-LESSEQUAL", "");
-				if(childType == PrimitiveType.INTEGER) {
-					code.add(JumpNeg, popDuplicate);
-
-					code.add(Label,compareEqual);
-					code.add(ASMOpcode.JumpFalse, trueLabel);	//jump when arg1 == arg2	
-					code.add(Label, popDuplicate);
-					code.add(Pop);
-					code.add(Jump,trueLabel);
-				} else if(childType == PrimitiveType.FLOATING) {
-					
-					code.add(JumpFNeg, popDuplicate);
-
-					code.add(Label,compareEqual);
-					code.add(ASMOpcode.JumpFZero, trueLabel);	//jump when arg1 == arg2	
-					code.add(Label, popDuplicate);
-					code.add(Pop);
-					code.add(Jump,trueLabel);	
-				}
-				
-				
-			} else if(operator == Punctuator.NOTEQUAL && childType == PrimitiveType.FLOATING) {
-				code.add(ASMOpcode.JumpFZero, falseLabel);
-				code.add(ASMOpcode.Jump, trueLabel);
-			} else {
-				ASMOpcode Opcode = null;
-				if(childType == PrimitiveType.INTEGER) {
-					if(operator == Punctuator.GREATER)
-						Opcode = ASMOpcode.JumpPos;
-					else if(operator == Punctuator.LESS)
-						Opcode = ASMOpcode.JumpNeg;
-					else if(operator == Punctuator.EQUAL)
-						Opcode = ASMOpcode.JumpFalse;
-					else if(operator == Punctuator.NOTEQUAL)
-						Opcode = ASMOpcode.JumpTrue;
-				} else if (childType == PrimitiveType.FLOATING) {
-					if(operator == Punctuator.GREATER)
-						Opcode = ASMOpcode.JumpFPos;
-					else if(operator == Punctuator.LESS)
-						Opcode = ASMOpcode.JumpFNeg;
-					else if(operator == Punctuator.EQUAL)
-						Opcode = ASMOpcode.JumpFZero;
-				} 
-				code.add(Opcode, trueLabel);
-				
-			}
-			code.add(Jump, falseLabel);
-
-		}
-		
+	
 		// boolean operator
 		private boolean isBooleanOperator(Lextant operator) {
 			return operator==Punctuator.BOOLEANAND || operator==Punctuator.BOOLEANOR;

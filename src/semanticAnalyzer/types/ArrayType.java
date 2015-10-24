@@ -2,6 +2,9 @@ package semanticAnalyzer.types;
 
 public class ArrayType implements Type{
 
+	public class TypeVariable {
+
+	}
 	private Type subType;
 
 	public ArrayType(Type subtype) {
@@ -14,11 +17,14 @@ public class ArrayType implements Type{
 	@Override
 	public boolean equals(Object otherType) {
 		assert otherType instanceof Type;
-		
-		if(!(otherType instanceof ArrayType) || otherType == null) {
+		assert subType != null;
+				
+		if(otherType instanceof PrimitiveType || otherType == null)
 			return false;
-		} else 
+		else if(otherType instanceof ArrayType)
 			return subType.equals(((ArrayType)otherType).subType);
+		else 	//Type Variable
+			return otherType.equals(this);	
 	}
 	
 	public Type getSubType() {

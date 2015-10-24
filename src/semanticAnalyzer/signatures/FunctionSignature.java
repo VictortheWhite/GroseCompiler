@@ -65,6 +65,8 @@ public class FunctionSignature {
 		if(valueType == PrimitiveType.ERROR && ALL_TYPES_ACCEPT_ERROR_TYPES) {
 			return true;
 		}	
+		// cannot be valueType.equals(variableType)
+		// otherwise PrimitiveType.equals(TypeVariable) will return false
 		return variableType.equals(valueType);
 	}
 	

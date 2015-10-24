@@ -5,6 +5,8 @@ import inputHandler.InputHandler;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 
+
+//import semanticAnalyzer.types.*;
 public class NumberedFileLister extends GrouseApplication {
 	private static InputHandler handler;
 
@@ -14,7 +16,7 @@ public class NumberedFileLister extends GrouseApplication {
 	 */
 	public static void main(String[] args) throws FileNotFoundException {
 		checkArguments(args, "NumberedFileLister");
-		listFile(args[0], System.out);
+		listFile(args[0], System.out);	
 	}
 
 	
