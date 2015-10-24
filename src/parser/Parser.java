@@ -211,21 +211,21 @@ public class Parser {
 		return token.isLextant(Keyword.IMMUTABLE) || token.isLextant(Keyword.VARIABLE);
 	}
 	
-	// reassignment -> let identifier := expression;
+	// reassignment -> let target := expression;
 	private ParseNode parseReassignment() {
 		if(!startsReassignment(nowReading)) {
 			return syntaxErrorNode("reassignment");
 		}
 		Token reassignmentToken = nowReading;
 		readToken();
-		ParseNode identifier = parseIdentifier();
+		ParseNode target = parseExpression();
 		expect(Punctuator.ASSIGN);
 		ParseNode initializer = parseExpression();
 		expect(Punctuator.TERMINATOR);
 		
-		return ReassignmentNode.withChildren(reassignmentToken, identifier, initializer);
+		return ReassignmentNode.withChildren(reassignmentToken, target, initializer);
 	}
-	
+
 	private boolean startsReassignment(Token token) {
 		return token.isLextant(Keyword.LET);
 	}

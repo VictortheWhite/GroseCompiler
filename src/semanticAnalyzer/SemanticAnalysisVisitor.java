@@ -13,7 +13,6 @@ import semanticAnalyzer.signatures.FunctionSignatures;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
-import semanticAnalyzer.types.TypeVariable;
 import symbolTable.Binding;
 import symbolTable.Scope;
 import tokens.LextantToken;
@@ -82,17 +81,32 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	@Override
 	public void visitLeave(ReassignmentNode node) {
-		IdentifierNode identifier = (IdentifierNode) node.child(0);
-		ParseNode initializer = node.child(1);
-		
-		if(identifier.getBinding().getImmutablity()) {
-			reassignImmutableError(node, identifier.getToken().getLexeme());
+		ParseNode target = null;
+		ParseNode expr = node.child(1);
+		if(node.child(0) instanceof ArrayIndexingNode) {
+			target = node.child(0);
 		} 
-		if(!identifier.getType().equals(initializer.getType())) {
-			typeCheckError(node, Arrays.asList(identifier.getType(),initializer.getType()));
+		else if(node.child(0) instanceof IdentifierNode){
+			IdentifierNode identifier = (IdentifierNode) node.child(0);
+		
+			if(identifier.getBinding().getImmutablity()) {
+				reassignImmutableError(node, identifier.getToken().getLexeme());
+			}
+			target = identifier;		
+		} 
+		else {
+			exprNotTargetableError(node, node.child(0));
+			node.setType(PrimitiveType.ERROR);
+			return;
 		}
 		
-		node.setType(identifier.getType());
+		
+		if(!target.getType().equals(expr.getType())) {
+			typeCheckError(node, Arrays.asList(expr.getType(),expr.getType()));
+		}
+		node.setType(target.getType());
+
+		
 	}
 	/////////////////////////////////////////////////////////////////////////////
 	//control flow statement
@@ -101,6 +115,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode condition = node.child(0);
 		if(condition.getType() != PrimitiveType.BOOLEAN) {
 			logError("Expected boolean type for if (condition)");
+			node.setType(PrimitiveType.ERROR);
 		}
 	}
 	@Override
@@ -108,6 +123,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode condition = node.child(0);
 		if(condition.getType() != PrimitiveType.BOOLEAN) {
 			logError("Expected boolean type for if (condition)");
+			node.setType(PrimitiveType.ERROR);
 		}
 	}
 
@@ -121,7 +137,6 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		List<Type> childTypes = Arrays.asList(left.getType(), right.getType());
 				
 		Lextant operator = operatorFor(node);
-		//FunctionSignature signature = FunctionSignature.signatureOf(operator);
 		FunctionSignature signature = FunctionSignatures.signature(operator, childTypes );
 		
 		if(signature.accepts(childTypes)) {
@@ -166,7 +181,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 		
-		FunctionSignatures.resetTypeVar();
+		// not needed anymore because node.setType did that
+		// FunctionSignatures.resetTypeVar();
 	}
 	private Lextant operatorFor(ParseNode node) {
 		LextantToken token = (LextantToken) node.getToken();
@@ -196,14 +212,15 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		FunctionSignature signature = FunctionSignatures.signature(operator, childTypes );
 		
 		if(signature.accepts(childTypes)) {
-			node.setType(((TypeVariable)signature.resultType()).getType());
+			node.setType(signature.resultType());	//setType deals with type variable correctly and reset typeVar
 		}
 		else {
 			typeCheckError(node, childTypes);
 			node.setType(PrimitiveType.ERROR);
 		}
 		
-		FunctionSignatures.resetTypeVar();
+		// not needed anymore cuz node.setType() resets typeVar
+		// FunctionSignatures.resetTypeVar();		
 	}
 	
 
@@ -284,6 +301,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		String errorMessage = "populated array creation requires same types in expression list: ";
 		
 		logError(errorMessage + type.infoString() + token.getLocation());
+	}
+	private void exprNotTargetableError(ParseNode node, ParseNode child) {
+		Token token = node.getToken();
+		String errorMessage = "targetable expr must be identifier or array indexing: ";
+		
+		logError(errorMessage + token.getLocation() + child);
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

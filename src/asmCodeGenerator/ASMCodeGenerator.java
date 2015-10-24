@@ -567,7 +567,7 @@ public class ASMCodeGenerator {
 					code.add(JumpFNeg, falseLabel);
 					code.add(Jump, trueLabel);
 				}
-			} else if(childType == PrimitiveType.BOOLEAN || childType == PrimitiveType.STRING) {
+			} else if(childType == PrimitiveType.BOOLEAN || childType == PrimitiveType.STRING || childType instanceof ArrayType) {
 				code.add(Subtract);
 				if(operator == Punctuator.EQUAL) {
 					code.add(JumpFalse, trueLabel);
@@ -576,8 +576,7 @@ public class ASMCodeGenerator {
 					code.add(JumpTrue, trueLabel);
 					code.add(Jump, falseLabel);
 				}
-			}
-
+			} 
 		}
 	
 		// boolean operator
@@ -757,9 +756,8 @@ public class ASMCodeGenerator {
 		
 		// array indexing
 		public void visitLeave(ArrayIndexingNode node) {
-			newValueCode(node);
-			Type subType = ((ArrayType)node.child(0).getType()).getSubType();	//get subtype of the array
-			ASMOpcode loadOpcode = LoadArrayOpcode(subType);
+			newAddressCode(node);
+			Type type = node.getType();	//get subtype of the array
 			ASMCodeFragment array = removeValueCode(node.child(0));
 			ASMCodeFragment index = removeValueCode(node.child(1));
 			
@@ -779,12 +777,11 @@ public class ASMCodeGenerator {
 			code.add(Add);							// [...adr len len-i len-i-1]
 			code.add(JumpNeg, RunTime.ARRAY_INDEXING_OUT_BOUND_ERROR);	// i >= len-1  => len-i-1 >= 0		[...adr len len-i]
 			code.add(Subtract);						// [...adr i]	len-(len-i) = i
-			code.add(PushI, subType.getSize());
+			code.add(PushI, type.getSize());
 			code.add(Multiply);						// [...adr i*subTypeSize]
 			code.add(PushI, 17);
 			code.add(Add);							
 			code.add(Add);							// [...adr+17+i*subTypeSize]
-			code.add(loadOpcode);
 			
 		}
 		

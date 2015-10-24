@@ -6,7 +6,6 @@ public class TypeVariable implements Type{
 	private String name;
 	
 	public TypeVariable(String name) {
-		System.out.println("shit");
 		this.name = name;
 		this.type = null;
 	}
