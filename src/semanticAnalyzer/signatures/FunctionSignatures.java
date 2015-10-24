@@ -8,6 +8,8 @@ import java.util.Map;
 import lexicalAnalyzer.Punctuator;
 import semanticAnalyzer.types.Type;
 import semanticAnalyzer.types.PrimitiveType;
+import semanticAnalyzer.types.ArrayType;
+import semanticAnalyzer.types.TypeVariable;
 import asmCodeGenerator.codeStorage.ASMOpcode;
 
 
@@ -61,16 +63,21 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 		FunctionSignatures signatures = FunctionSignatures.signaturesOf(key);
 		return signatures.acceptingSignature(types);
 	}
+	
+
 
 	
 	
 	/////////////////////////////////////////////////////////////////////////////////
 	// Put the signatures for operators in the following static block.
-	
+	private static TypeVariable TypeVar = new TypeVariable("S");
+	public static void resetTypeVar() {
+		TypeVar.reset();
+	}
+
 	static {
 		// here's one example to get you started with FunctionSignatures: the signatures for addition.		
 		// for this to work, you should statically import PrimitiveType.*
-		
 		
 		new FunctionSignatures(Punctuator.ADD,
 		    new FunctionSignature(ASMOpcode.Add, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.INTEGER),
@@ -146,8 +153,10 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN)
 			);
 		
-		new FunctionSignatures(Punctuator.BAR,
-				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER)
+		//length
+		new FunctionSignatures(Punctuator.BAR,											
+				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
+				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER)
 			);
 		
 		new FunctionSignatures(Punctuator.CAST,
@@ -164,7 +173,7 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN)
 			);
 		
-		
+
 		
 		// First, we use the operator itself (in this case the Punctuator ADD) as the key.
 		// Then, we give that key two signatures: one an (INT x INT -> INT) and the other
@@ -186,5 +195,5 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 		// required code.
 
 	}
-
+	
 }

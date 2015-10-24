@@ -303,6 +303,7 @@ public class Parser {
 	// expr3 -> expr3.5 [MULT expr3.5]*  (left-assoc)
 	// expr3.5 -> exprUnaryOp [:type]* 
 	// exprUnaryOp -> [!|copy]* expr4 
+	// exprArrayIndexing -> expr4
 	// expr4 -> literal
 	//			parenthesis
 	//			length

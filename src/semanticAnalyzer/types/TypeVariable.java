@@ -6,6 +6,7 @@ public class TypeVariable implements Type{
 	private String name;
 	
 	public TypeVariable(String name) {
+		System.out.println("shit");
 		this.name = name;
 		this.type = null;
 	}
@@ -13,8 +14,6 @@ public class TypeVariable implements Type{
 	public boolean equals(Object otherType) {
 		assert otherType instanceof Type;
 				
-		System.out.println(((Type)otherType).infoString());
-		System.out.println(this.type);
 		if(this.type == null) {
 			this.type = (Type)otherType;
 			return true;

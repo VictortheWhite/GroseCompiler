@@ -87,7 +87,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		if(identifier.getBinding().getImmutablity()) {
 			reassignImmutableError(node, identifier.getToken().getLexeme());
 		} 
-		if(identifier.getType() != initializer.getType()) {
+		if(!identifier.getType().equals(initializer.getType())) {
 			typeCheckError(node, Arrays.asList(identifier.getType(),initializer.getType()));
 		}
 		
@@ -164,6 +164,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			typeCheckError(node, childTypes);
 			node.setType(PrimitiveType.ERROR);
 		}
+		
+		FunctionSignatures.resetTypeVar();
 	}
 	private Lextant operatorFor(ParseNode node) {
 		LextantToken token = (LextantToken) node.getToken();

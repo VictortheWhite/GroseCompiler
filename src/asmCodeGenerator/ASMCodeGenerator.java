@@ -243,8 +243,6 @@ public class ASMCodeGenerator {
 		}
 		private void appendPrintCode(ParseNode node) {
 			
-			System.out.println(node);
-			System.out.println(node.getType());
 			String format = printFormat(node.getType());
 
 			code.append(removeValueCode(node));
@@ -787,10 +785,16 @@ public class ASMCodeGenerator {
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			int offset;
+			if(node.child(0).getType() instanceof ArrayType) {
+				offset = 13;
+			} else {
+				offset = 9;
+			}
 			newValueCode(node);
 			
 			code.append(arg1);
-			code.add(PushI, 9);
+			code.add(PushI, offset);
 			code.add(Add);
 			code.add(LoadI);
 		}
@@ -829,7 +833,6 @@ public class ASMCodeGenerator {
 				code.add(Duplicate);
 				code.append(childCode);
 				code.add(storeOpcode);
-				System.out.println(storeOpcode);
 				code.add(PushI, subTypeSize);
 				code.add(Add);
 			}
