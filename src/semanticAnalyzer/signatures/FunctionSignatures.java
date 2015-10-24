@@ -153,11 +153,18 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN)
 			);
 		
-		//length
+		// length
 		new FunctionSignatures(Punctuator.BAR,											
 				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
 				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER)
 			);
+		
+		// ArrayOperation------------------------------------------------------------------------------------
+		// indexing
+		new FunctionSignatures(Punctuator.OPEN_SQUARE_BRACKET,
+				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER, TypeVar)
+			);
+		
 		
 		new FunctionSignatures(Punctuator.CAST,
 				new FunctionSignature(1, PrimitiveType.INTEGER, PrimitiveType.INTEGER, PrimitiveType.INTEGER),

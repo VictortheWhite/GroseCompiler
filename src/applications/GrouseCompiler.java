@@ -76,7 +76,7 @@ public class GrouseCompiler extends GrouseApplication {
 		File file = new File(filename);
 		PrintStream out = new PrintStream(file);
 		//Print the ASM code to console
-		System.out.println(code);
+		//System.out.println(code);
 		out.print(code);
 		out.close();
 	}

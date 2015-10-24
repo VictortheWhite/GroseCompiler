@@ -302,8 +302,8 @@ public class Parser {
 	// expr2 -> expr3 [+ expr3]*  (left-assoc)
 	// expr3 -> expr3.5 [MULT expr3.5]*  (left-assoc)
 	// expr3.5 -> exprUnaryOp [:type]* 
-	// exprUnaryOp -> [!|copy]* expr4 
-	// exprArrayIndexing -> expr4
+	// exprUnaryOp -> [!|copy]* exprArrayIndexing 
+	// exprArrayIndexing -> expr4 [ [expr] ]*
 	// expr4 -> literal
 	//			parenthesis
 	//			length
@@ -484,7 +484,7 @@ public class Parser {
 		ParseNode UnaryRoot = null;
 		ParseNode currentNode = null;
 		if(!isUnaryOperator(nowReading)) {
-			return parseExpression4();
+			return parseExpressionArrayIndexing();
 		} else {
 			UnaryRoot = new UnaryOperatorNode(nowReading);
 			currentNode = UnaryRoot;
@@ -496,16 +496,42 @@ public class Parser {
 			currentNode = UnaryOperatorNode.addAndReturnChildren(unaryOperatorToken, currentNode);	
 			readToken();
 		}
-		currentNode.appendChild(parseExpression4());
+		currentNode.appendChild(parseExpressionArrayIndexing());
 		return UnaryRoot;
 
 		
 	}
 	private boolean startsExpressionUnaryOp(Token token) {
-		return isUnaryOperator(token) || startsExpression4(token);
+		return isUnaryOperator(token) || startsExpressionArrayIndexing(token);
 	}
 	private boolean isUnaryOperator(Token token) {
 		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT);
+	}
+	
+	// exprArrayIndexing -> expr4[ [expr] ]*
+	private ParseNode parseExpressionArrayIndexing() {
+		if(!startsExpressionArrayIndexing(nowReading)) {
+			return syntaxErrorNode("expression-ArrayIndexing");
+		}
+		
+		ParseNode left = parseExpression4();
+		while(true){
+			if(nowReading.isLextant(Punctuator.OPEN_SQUARE_BRACKET)) {
+				Token ArrayIndexingToken = nowReading;
+				readToken();
+				ParseNode right = parseExpression();
+				expect(Punctuator.CLOSE_SQUARE_BRACKET);
+				
+				left = ArrayIndexingNode.withChildren(ArrayIndexingToken, left, right);
+			} else
+				break;
+			
+		}
+		
+		return left;
+	}
+	private boolean startsExpressionArrayIndexing(Token token) {
+		return startsExpression4(token);
 	}
 	
 	// expr4 -> literal | parenthesis | length | populated_Array

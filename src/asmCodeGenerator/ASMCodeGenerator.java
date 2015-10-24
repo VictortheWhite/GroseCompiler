@@ -11,6 +11,7 @@ import asmCodeGenerator.Header;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
+import parseTree.nodeTypes.ArrayIndexingNode;
 import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
@@ -687,7 +688,17 @@ public class ASMCodeGenerator {
 			}
 			return null;
 		}
-
+		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
+			if(opcode == ASMOpcode.Divide) {
+				code.add(Duplicate);
+				code.add(JumpFalse,RunTime.INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR );
+			} else if(opcode == ASMOpcode.FDivide) {
+				code.add(Duplicate);
+				code.add(JumpFZero,RunTime.FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR);
+			} else
+				return;
+		}		
+		
 		// casting
 		private void visitCastingOperatorNode(BinaryOperatorNode node) {
 			newValueCode(node);
@@ -744,16 +755,41 @@ public class ASMCodeGenerator {
 			}
 		}
 		
-		private void AddRuntimeErrorForZeroDivision(ASMOpcode opcode) {
-			if(opcode == ASMOpcode.Divide) {
-				code.add(Duplicate);
-				code.add(JumpFalse,RunTime.INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR );
-			} else if(opcode == ASMOpcode.FDivide) {
-				code.add(Duplicate);
-				code.add(JumpFZero,RunTime.FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR);
-			} else
-				return;
+		// array indexing
+		public void visitLeave(ArrayIndexingNode node) {
+			newValueCode(node);
+			Type subType = ((ArrayType)node.child(0).getType()).getSubType();	//get subtype of the array
+			ASMOpcode loadOpcode = LoadArrayOpcode(subType);
+			ASMCodeFragment array = removeValueCode(node.child(0));
+			ASMCodeFragment index = removeValueCode(node.child(1));
+			
+			code.append(array);						// [...adr]
+			code.add(Duplicate);
+			code.add(PushI, 13);
+			code.add(Add);
+			code.add(LoadI);						// [...adr len]
+			code.add(Duplicate);					// [...adr len len]
+			code.append(index);						// [...adr len len i]
+			code.add(Duplicate);
+			//code.add(PStack);
+			code.add(JumpNeg, RunTime.ARRAY_INDEXING_OUT_BOUND_ERROR);	// [...adr len len i]
+			code.add(Subtract);						// [...adr len len-i]
+			code.add(Duplicate);
+			code.add(PushI, -1);
+			code.add(Add);							// [...adr len len-i len-i-1]
+			code.add(JumpNeg, RunTime.ARRAY_INDEXING_OUT_BOUND_ERROR);	// i >= len-1  => len-i-1 >= 0		[...adr len len-i]
+			code.add(Subtract);						// [...adr i]	len-(len-i) = i
+			code.add(PushI, subType.getSize());
+			code.add(Multiply);						// [...adr i*subTypeSize]
+			code.add(PushI, 17);
+			code.add(Add);							
+			code.add(Add);							// [...adr+17+i*subTypeSize]
+			code.add(loadOpcode);
+			
 		}
+		
+
+
 		
 		// expressions --------Binary operator
 		public void visitLeave(UnaryOperatorNode node) {

@@ -47,6 +47,9 @@ public interface ParseNodeVisitor {
 
 	void visitEnter(PopulatedArrayNode node);
 	void visitLeave(PopulatedArrayNode node);
+	
+	void visitEnter(ArrayIndexingNode node);
+	void visitLeave(ArrayIndexingNode node);
 	// leaf nodes: visitLeaf only
 	void visit(BooleanConstantNode node);
 	void visit(ErrorNode node);
@@ -156,6 +159,12 @@ public interface ParseNodeVisitor {
 			defaultVisitEnter(node);
 		}
 		public void visitLeave(PopulatedArrayNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(ArrayIndexingNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ArrayIndexingNode node) {
 			defaultVisitLeave(node);
 		}
 		

@@ -2,9 +2,6 @@ package semanticAnalyzer.types;
 
 public class ArrayType implements Type{
 
-	public class TypeVariable {
-
-	}
 	private Type subType;
 
 	public ArrayType(Type subtype) {

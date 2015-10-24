@@ -13,6 +13,7 @@ import semanticAnalyzer.signatures.FunctionSignatures;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
+import semanticAnalyzer.types.TypeVariable;
 import symbolTable.Binding;
 import symbolTable.Scope;
 import tokens.LextantToken;
@@ -184,7 +185,26 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		node.setType(arrayType);
 	}
 	
-
+	// array indexing
+	public void visitLeave(ArrayIndexingNode node) {
+		assert node.nChildren() == 2;
+		ParseNode left  = node.child(0);
+		ParseNode right = node.child(1);
+		List<Type> childTypes = Arrays.asList(left.getType(), right.getType());
+				
+		Lextant operator = operatorFor(node);
+		FunctionSignature signature = FunctionSignatures.signature(operator, childTypes );
+		
+		if(signature.accepts(childTypes)) {
+			node.setType(((TypeVariable)signature.resultType()).getType());
+		}
+		else {
+			typeCheckError(node, childTypes);
+			node.setType(PrimitiveType.ERROR);
+		}
+		
+		FunctionSignatures.resetTypeVar();
+	}
 	
 
 
