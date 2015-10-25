@@ -1,4 +1,4 @@
-package asmCodeGenerator.runtime;
+ package asmCodeGenerator.runtime;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
@@ -19,7 +19,9 @@ public class RunTime {
 	
 	public static final String STRING_CONCA_ARG1	  = "$string-concatenation-arg1";
 	public static final String STRING_CONCA_ARG2	  = "$string-concatenation-arg2";
-	public static final String STRING_CONCATENATION  = "$$string-concatenation-start";
+	public static final String ARRAY_COPY_ARG		  = "$array-copy-arg";
+	public static final String STRING_CONCATENATION   = "$$string-concatenation-start";
+	public static final String ARRAY_COPY			  = "$$array-copy-start";
 	
 	public static final String GENERAL_RUNTIME_ERROR = "$$general-runtime-error";
 	public static final String INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR = "$$i-divide-by-zero";
@@ -33,6 +35,7 @@ public class RunTime {
 		result.append(stringsForPrintf());
 		result.append(runtimeErrors());
 		result.append(stringConcatenationSubRoutine());
+		result.append(arrayCopySubRoutine());
 		result.add(DLabel, USABLE_MEMORY_START);
 		return result;
 	}
@@ -75,6 +78,7 @@ public class RunTime {
 		String arg1_End = "string-concatenation-arg1-loop-end";
 		String arg2_Start = "string-concatenation-arg2-loop-start";
 		String arg2_End = "string-concatenation-arg2-loop-end";
+		
 		frag.add(DLabel, STRING_CONCA_ARG1);		// memory location reserved for arg1
 		frag.add(DataI, 0);
 		frag.add(DLabel, STRING_CONCA_ARG2);		// memory location reserved for arg2
@@ -206,6 +210,80 @@ public class RunTime {
 		frag.add(StoreC); 							// [...R C]
 		frag.add(Exchange); 						// [...C R]
 		frag.add(PopPC);							// return
+		return frag;
+	}
+	
+	private ASMCodeFragment arrayCopySubRoutine() {
+		String loop_Start = "array-copy-loop-start";
+		String loop_End = "array-copy-loop-end";
+		
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VALUE);
+		
+		frag.add(DLabel,ARRAY_COPY_ARG);
+		frag.add(DataI, 0);
+
+		frag.add(Label, ARRAY_COPY);
+				
+		frag.add(PushD, ARRAY_COPY_ARG);
+		frag.add(LoadI);
+		frag.add(Duplicate);				// [...R A A]
+		frag.add(PushI, 9);
+		frag.add(Add);
+		frag.add(LoadI);					// [...R A subTypeSize]
+		frag.add(Exchange);					// [...R subTypeSize A]
+		frag.add(PushI, 13);
+		frag.add(Add);
+		frag.add(LoadI);					// [...R subTypeSize len]
+		frag.add(Multiply);
+		frag.add(PushI, 17);
+		frag.add(Add);						// [...R size]		size = 17 + subTypeSize * length
+		frag.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
+											// [...R adr]
+		frag.add(Duplicate);
+		frag.add(PushD, ARRAY_COPY_ARG);
+		frag.add(LoadI);
+		frag.add(Duplicate);
+		frag.add(PushI, 9);
+		frag.add(Add);
+		frag.add(LoadI);					// [...R adr adr A subTypeSize]
+		frag.add(Exchange);					// [...R adr adr subTypeSize A]
+		frag.add(PushI, 13);
+		frag.add(Add);
+		frag.add(LoadI);					// [...R adr adr subTypeSize A]
+		frag.add(Multiply);
+		frag.add(PushI, 17);
+		frag.add(Add);						// [...R adr adr size]
+		
+		frag.add(Label, loop_Start);
+		frag.add(Duplicate);				
+		frag.add(JumpFalse, loop_End);
+		frag.add(Exchange);					// [...R adr n adr*]
+		frag.add(Duplicate);				
+		frag.add(PushD, ARRAY_COPY_ARG);
+		frag.add(LoadI);					// [...R adr n adr* adr* A]
+		frag.add(LoadC);					// [...R adr n adr* adr* A[i]]
+		frag.add(StoreC);					// [...R adr n adr*]
+		frag.add(PushI, 1);
+		frag.add(Add);						// adr*++
+		frag.add(PushD, ARRAY_COPY_ARG);
+		frag.add(LoadI);
+		frag.add(PushI, 1);
+		frag.add(Add);						// [...R adr n adr* A+1]
+		frag.add(PushD, ARRAY_COPY_ARG);
+		frag.add(Exchange);					// [...R adr n adr* arg A+1]
+		frag.add(StoreI);					// [...R adr n adr*]
+		frag.add(Exchange);
+		frag.add(PushI, -1);
+		frag.add(Add);						// [...R adr adr* n]  n--
+		frag.add(Jump, loop_Start);
+		frag.add(Label, loop_End);
+		frag.add(Pop);
+		frag.add(Pop);						//[...R adr]
+		frag.add(Exchange);
+		frag.add(Return);
+		
+		
+		
 		return frag;
 	}
 	

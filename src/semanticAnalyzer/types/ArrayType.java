@@ -14,9 +14,10 @@ public class ArrayType implements Type{
 	@Override
 	public boolean equals(Object otherType) {
 		assert otherType instanceof Type;
+		assert otherType != null;
 		assert subType != null;
-				
-		if(otherType instanceof PrimitiveType || otherType == null)
+		
+		if(otherType instanceof PrimitiveType)
 			return false;
 		else if(otherType instanceof ArrayType)
 			return subType.equals(((ArrayType)otherType).subType);

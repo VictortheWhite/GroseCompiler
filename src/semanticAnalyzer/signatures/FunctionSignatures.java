@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Punctuator;
 import semanticAnalyzer.types.Type;
 import semanticAnalyzer.types.PrimitiveType;
@@ -155,6 +156,7 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN)
 			);
 		
+		
 		// length
 		new FunctionSignatures(Punctuator.BAR,											
 				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
@@ -166,6 +168,10 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 		new FunctionSignatures(Punctuator.OPEN_SQUARE_BRACKET,
 				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER, TypeVar)
 			);
+		// copy
+		new FunctionSignatures(Keyword.COPY,
+				new FunctionSignature(1, new ArrayType(TypeVar), new ArrayType(TypeVar))
+		);
 		
 		// casting------------------------------------------------------------------------------------------
 		new FunctionSignatures(Punctuator.CAST,

@@ -44,7 +44,7 @@ public class ParseNode {
 	public void setType(Type type) {
 		if(type instanceof TypeVariable) {
 			this.type = ((TypeVariable)type).getType();
-			//FunctionSignatures.resetTypeVar();	both place would work
+			//FunctionSignatures.resetTypeVar();	//both place would work
 		} else
 			this.type = type;
 		

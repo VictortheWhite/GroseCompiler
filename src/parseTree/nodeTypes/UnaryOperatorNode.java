@@ -4,6 +4,9 @@ package parseTree.nodeTypes;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
 import lexicalAnalyzer.Lextant;
+import lexicalAnalyzer.Punctuator;
+import lexicalAnalyzer.Keyword;
+import semanticAnalyzer.types.*;
 import tokens.LextantToken;
 import tokens.Token;
 
@@ -11,7 +14,7 @@ public class UnaryOperatorNode extends ParseNode {
 
 	public UnaryOperatorNode(Token token) {
 		super(token);
-		assert(token instanceof LextantToken);
+		assert(token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY));
 	}
 
 	public UnaryOperatorNode(ParseNode node) {
@@ -21,6 +24,16 @@ public class UnaryOperatorNode extends ParseNode {
 	
 	////////////////////////////////////////////////////////////
 	// attributes
+	
+	@Override
+	public void setType(Type type) {
+		if(type instanceof ArrayType) {
+			assert ((ArrayType)type).getSubType() instanceof TypeVariable;
+			TypeVariable var = (TypeVariable)((ArrayType)type).getSubType();
+			super.setType(new ArrayType(var.getType())); 
+		} else 
+			super.setType(type);
+	}
 	
 	public Lextant getOperator() {
 		return lextantToken().getLextant();

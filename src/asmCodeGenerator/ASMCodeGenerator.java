@@ -8,6 +8,7 @@ import asmCodeGenerator.codeStorage.ASMOpcode;
 import asmCodeGenerator.runtime.MemoryManager;
 import asmCodeGenerator.runtime.RunTime;
 import asmCodeGenerator.Header;
+import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
@@ -794,8 +795,13 @@ public class ASMCodeGenerator {
 			if(operator == Punctuator.BOOLEANCOMPLIMENT) {
 				visitBooleanComplimentNode(node, operator);
 			}
+			if(operator == Keyword.COPY) {
+				visitArrayCopyNode(node, operator);
+			}
 		}
-		public void visitBooleanComplimentNode(UnaryOperatorNode node, Lextant operator) {
+		private void visitBooleanComplimentNode(UnaryOperatorNode node, Lextant operator) {
+			assert operator == Punctuator.BOOLEANCOMPLIMENT;
+			
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
 			String falseLabel = labeller.newLabel("boolean-binary-operator-false", "");
 			String trueLabel = labeller.newLabelSameNumber("boolean-binary-operator-true", "");
@@ -814,7 +820,21 @@ public class ASMCodeGenerator {
 			code.add(Jump, joinLabel);
 			code.add(Label, joinLabel);
 		}
-		
+		private void visitArrayCopyNode(UnaryOperatorNode node, Lextant operator) {
+			assert operator == Keyword.COPY;
+			
+			ASMCodeFragment arg = removeValueCode(node.child(0));
+			
+			newValueCode(node);
+			
+			code.append(arg);
+			code.add(PushD, RunTime.ARRAY_COPY_ARG);
+			code.add(Exchange);
+			code.add(StoreI);
+			
+			code.add(Call, RunTime.ARRAY_COPY);
+			
+		}
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
@@ -883,9 +903,7 @@ public class ASMCodeGenerator {
 			String startLoopLabel = labeller.newLabel("empty-array-initialization-loop-start", "");
 			String endLoopLabel = labeller.newLabelSameNumber("empty-array-initialization-loop-end", "");
 			String lengthVariableLabel = labeller.newLabelSameNumber("temporary-variable-for-length-in-fresh", "");
-			
-			System.out.println(lengthVariableLabel);
-			
+						
 			ASMCodeFragment lengthCode = removeValueCode(node.child(1));
 			
 			newValueCode(node);
@@ -938,7 +956,7 @@ public class ASMCodeGenerator {
 			code.add(Pop);
 			code.add(Pop);											// [...adr]
 		}
-		
+	
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
 		public void visit(BooleanConstantNode node) {

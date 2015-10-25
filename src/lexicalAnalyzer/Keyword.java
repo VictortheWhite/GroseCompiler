@@ -10,6 +10,7 @@ public enum Keyword implements Lextant {
 	FRESH("fresh"),
 	LET("let"),
 	PRINT("print"),
+	COPY("copy"),
 	NEWLINE("nl"),
 	INT("int"),
 	FLOAT("float"),

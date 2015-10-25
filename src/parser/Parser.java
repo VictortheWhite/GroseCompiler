@@ -505,7 +505,7 @@ public class Parser {
 		return isUnaryOperator(token) || startsExpressionArrayIndexing(token);
 	}
 	private boolean isUnaryOperator(Token token) {
-		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT);
+		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY);
 	}
 	
 	// exprArrayIndexing -> expr4[ [expr] ]*
