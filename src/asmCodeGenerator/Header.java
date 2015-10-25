@@ -1,9 +1,9 @@
 package asmCodeGenerator;
 
+import parseTree.nodeTypes.FreshArrayNode;
 import parseTree.nodeTypes.StringConstantNode;
 import parseTree.nodeTypes.PopulatedArrayNode;
-import semanticAnalyzer.types.ArrayType;
-import semanticAnalyzer.types.PrimitiveType;
+import semanticAnalyzer.types.*;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 import asmCodeGenerator.codeStorage.ASMOpcode;
 
@@ -39,7 +39,7 @@ public class Header {
 		code.add(ASMOpcode.Add);							// [...adr adr+4]
 		
 		code.add(ASMOpcode.Duplicate);
-		code.add(ASMOpcode.PushI, getStatusCode(node));		// 4bytes, Status
+		code.add(ASMOpcode.PushI, getStatusCode(node.getType()));		// 4bytes, Status
 		code.add(ASMOpcode.StoreI);							
 		code.add(ASMOpcode.PushI, 4);
 		code.add(ASMOpcode.Add);							//	[...adr adr+8]
@@ -59,13 +59,44 @@ public class Header {
 		code.add(ASMOpcode.PushI, node.nChildren());		// 4bytes, length( the number of elements of the array)
 		code.add(ASMOpcode.StoreI);							// [...adr]
 	}
-	private int getStatusCode(PopulatedArrayNode node) {
+	public void addHeader(ASMCodeFragment code, FreshArrayNode node, String lengthLabel) {
+		code.add(ASMOpcode.Duplicate);
+		
+		code.add(ASMOpcode.Duplicate);						// [...adr adr]
+		code.add(ASMOpcode.PushI, 9);						// 4bytes, Type Identifier
+		code.add(ASMOpcode.StoreI);							
+		code.add(ASMOpcode.PushI, 4);
+		code.add(ASMOpcode.Add);							// [...adr adr+4]
+		
+		code.add(ASMOpcode.Duplicate);
+		code.add(ASMOpcode.PushI, getStatusCode(node.getType()));		// 4bytes, Status
+		code.add(ASMOpcode.StoreI);							
+		code.add(ASMOpcode.PushI, 4);
+		code.add(ASMOpcode.Add);							//	[...adr adr+8]
+		
+		code.add(ASMOpcode.Duplicate);
+		code.add(ASMOpcode.PushI, 0);						// 1bytes, Refcount (not used in grouse-2)
+		code.add(ASMOpcode.StoreC);
+		code.add(ASMOpcode.PushI, 1);
+		code.add(ASMOpcode.Add);							// [...adr adr+9]
+		
+		code.add(ASMOpcode.Duplicate);
+		code.add(ASMOpcode.PushI, ((ArrayType)node.getType()).getSubTypeSize());	// 4bytes, size of subType
+		code.add(ASMOpcode.StoreI);
+		code.add(ASMOpcode.PushI, 4);
+		code.add(ASMOpcode.Add);							// [...adr adr+13]
+		
+		code.add(ASMOpcode.PushD, lengthLabel);				
+		code.add(ASMOpcode.LoadI);							// 4bytes, length( the number of elements of the array)
+		code.add(ASMOpcode.StoreI);							// [...adr]
+	}
+ 	public int getStatusCode(Type type) {
 		int StatusCode = 0;
 		int isSubTypeReference = 0;
 		
-		if(node.getType() == PrimitiveType.STRING) 
+		if(type == PrimitiveType.STRING) 
 			isSubTypeReference = 1;
-		if(node.getType() instanceof ArrayType)
+		if(type instanceof ArrayType)
 			isSubTypeReference = 1;
 		
 		StatusCode += 0;						// may be mutated

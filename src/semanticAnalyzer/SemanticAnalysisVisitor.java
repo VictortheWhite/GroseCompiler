@@ -3,6 +3,7 @@ package semanticAnalyzer;
 import java.util.Arrays;
 import java.util.List;
 
+import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
 import logging.GrouseLogger;
 import parseTree.ParseNode;
@@ -200,6 +201,21 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ArrayType arrayType = new ArrayType(childType);
 		node.setType(arrayType);
 	}
+	
+	// empty array creation
+	public void visitLeave(FreshArrayNode node) {
+		assert node.nChildren() == 2;
+		Type nodeType = new ArrayType(node.child(0).getType());
+		node.setType(nodeType);
+	}
+	
+	public void visitLeave(TypeNode node) {
+		assert node.nChildren() == 1;
+		assert node.getToken().isLextant(Keyword.ARRAY);
+		
+		node.setType(new ArrayType(node.child(0).getType()));
+	}
+	
 	
 	// array indexing
 	public void visitLeave(ArrayIndexingNode node) {

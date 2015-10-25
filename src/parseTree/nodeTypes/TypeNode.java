@@ -9,9 +9,11 @@ import tokens.Token;
 import semanticAnalyzer.types.*;
 
 public class TypeNode extends ParseNode {
+	
+	
 	public TypeNode(Token token) {
 		super(token);
-		assert(token.isLextant(Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL));
+		assert(token.isLextant(Keyword.ARRAY, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL));
 	}
 	public TypeNode(ParseNode node) {
 		super(node);
@@ -45,11 +47,26 @@ public class TypeNode extends ParseNode {
 		return null;
 	}
 
+	////////////////////////////////////////////////////////////
+	// convenience factory
+	
+	public static TypeNode withChildren(Token token, ParseNode left) {
+		TypeNode node = new TypeNode(token);
+		node.appendChild(left);
+		return node;
+	}
+	
 ///////////////////////////////////////////////////////////
 // accept a visitor
 	
 	public void accept(ParseNodeVisitor visitor) {
-		visitor.visit(this);
+		if(this.nChildren() == 0) {
+			visitor.visit(this);
+		} 
+		else {
+			visitor.visitEnter(this);
+			visitChildren(visitor);
+			visitor.visitLeave(this);
+		}		
 	}
-
 }

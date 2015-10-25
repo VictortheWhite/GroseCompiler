@@ -16,6 +16,7 @@ import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.FreshArrayNode;
 import parseTree.nodeTypes.LengthOperatorNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
@@ -769,7 +770,6 @@ public class ASMCodeGenerator {
 			code.add(Duplicate);					// [...adr len len]
 			code.append(index);						// [...adr len len i]
 			code.add(Duplicate);
-			//code.add(PStack);
 			code.add(JumpNeg, RunTime.ARRAY_INDEXING_OUT_BOUND_ERROR);	// [...adr len len i]
 			code.add(Subtract);						// [...adr len len-i]
 			code.add(Duplicate);
@@ -873,6 +873,70 @@ public class ASMCodeGenerator {
 			code.add(Pop);
 			
 			
+		}
+		
+		// expression -----------Empty Array Creation
+		public void visitLeave(FreshArrayNode node) {
+			// logic is comparatively complicated, so putting everything including header here
+			ArrayType nodeType = (ArrayType)node.getType();
+			int subTypeSize = nodeType.getSubTypeSize();
+			String startLoopLabel = labeller.newLabel("empty-array-initialization-loop-start", "");
+			String endLoopLabel = labeller.newLabelSameNumber("empty-array-initialization-loop-end", "");
+			String lengthVariableLabel = labeller.newLabelSameNumber("temporary-variable-for-length-in-fresh", "");
+			
+			System.out.println(lengthVariableLabel);
+			
+			ASMCodeFragment lengthCode = removeValueCode(node.child(1));
+			
+			newValueCode(node);
+			
+			code.add(DLabel, lengthVariableLabel);
+			code.add(DataI, 0);
+
+			code.append(lengthCode);
+			code.add(Duplicate);									// [...len len]
+			code.add(PushD, lengthVariableLabel);
+			code.add(Exchange);
+			code.add(StoreI);	
+			
+			// add RuntimeError
+			code.add(Duplicate);
+			code.add(JumpNeg, RunTime.ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR);
+			
+			
+			code.add(PushI, subTypeSize);
+			code.add(Multiply);
+			code.add(PushI, 17);
+			code.add(Add);											// [...size]
+			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);		// [...adr]
+			// add header
+			header.addHeader(code, node, lengthVariableLabel);		// [...adr]
+			
+			code.add(Duplicate);
+			code.add(PushI, 17);
+			code.add(Add);											// [...adr adr+17]
+			code.add(PushD, lengthVariableLabel);
+			code.add(LoadI);										// [...adr adr* n]
+			code.add(PushI, subTypeSize);
+			code.add(Multiply);										// [...adr adr* n]
+			code.add(Label, startLoopLabel);
+			code.add(Duplicate);
+			
+			code.add(JumpFalse, endLoopLabel);						// [...adr adr* n]
+			code.add(Exchange);										// [...adr n adr*]
+			code.add(Duplicate);
+			code.add(PushI, 0);
+			code.add(StoreC);										
+			code.add(PushI, 1);
+			code.add(Add);											// adr*++
+			code.add(Exchange);
+			code.add(PushI, -1);
+			code.add(Add);											// n--
+			code.add(Jump, startLoopLabel);
+			
+			code.add(Label, endLoopLabel);
+			code.add(Pop);
+			code.add(Pop);											// [...adr]
 		}
 		
 		///////////////////////////////////////////////////////////////////////////

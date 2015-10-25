@@ -25,6 +25,7 @@ public class RunTime {
 	public static final String INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR = "$$i-divide-by-zero";
 	public static final String FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR = "$$f-divide-by-zero";
 	public static final String ARRAY_INDEXING_OUT_BOUND_ERROR = "$$array-indexing-index-out-bound";
+	public static final String ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR ="$$array-negative-size-creation";
 
 	private ASMCodeFragment environmentASM() {
 		ASMCodeFragment result = new ASMCodeFragment(GENERATES_VOID);
@@ -215,6 +216,7 @@ public class RunTime {
 		integerDivideByZeroError(frag);
 		floatingDivideByZeroError(frag);
 		arrayIndexingOutBoundError(frag);
+		arrayNegativeSizeCreationError(frag);
 		
 		return frag;
 	}
@@ -258,6 +260,17 @@ public class RunTime {
 		
 		frag.add(Label, ARRAY_INDEXING_OUT_BOUND_ERROR);
 		frag.add(PushD, arrayIndexingOutBoundMessage);
+		frag.add(Jump, GENERAL_RUNTIME_ERROR);
+	}
+	
+	private void arrayNegativeSizeCreationError(ASMCodeFragment frag) {
+		String arrayNegativeSizeCreationErrorMessage = "$errors-array-negative-creation";
+		
+		frag.add(DLabel, arrayNegativeSizeCreationErrorMessage);
+		frag.add(DataS, "array size cannnot be negative");
+		
+		frag.add(Label, ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR);
+		frag.add(PushD, arrayNegativeSizeCreationErrorMessage);
 		frag.add(Jump, GENERAL_RUNTIME_ERROR);
 	}
 

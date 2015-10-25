@@ -306,8 +306,9 @@ public class Parser {
 	// exprArrayIndexing -> expr4 [ [expr] ]*
 	// expr4 -> literal
 	//			parenthesis
-	//			length
 	//			[exprList]
+	//			fresh[type](expr)
+	//			length
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr0
@@ -459,14 +460,13 @@ public class Parser {
 			Token castingToken = nowReading;
 			ParseNode right = null;
 			readToken();
-			if(nowReading.isLextant(Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL)) {
-				right = new TypeNode(nowReading);
+			if(startsType(nowReading)) {
+				right = parseType();
 			} else {
 				return syntaxErrorNode("expression casting: expected type");
 			}
 			
 			left = BinaryOperatorNode.withChildren(castingToken, left, right);
-			readToken();
 		}
 		
 		return left;
@@ -534,7 +534,11 @@ public class Parser {
 		return startsExpression4(token);
 	}
 	
-	// expr4 -> literal | parenthesis | length | populated_Array
+	// expr4 -> literal 
+	//			parenthesis 
+	//			length 
+	//			populated_Array 
+	//			fresh[type](expr)
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {
 			return syntaxErrorNode("expression<4>");
@@ -545,6 +549,8 @@ public class Parser {
 			return parseParenthesis();
 		else if(startsPopulatedArray(nowReading)) 
 			return parsePopulatedArray();
+		else if(startsFreshArray(nowReading))
+			return parseFreshArray();
 		else if(startsLengthOperation(nowReading))
 			return parseLength();
 		
@@ -552,7 +558,8 @@ public class Parser {
 	}
 	private boolean startsExpression4(Token token) {
 		return startsLiteral(token) || startsParenthesis(token) 
-				|| startsLengthOperation(token) || startsPopulatedArray(token);
+				|| startsLengthOperation(token) || startsPopulatedArray(token) 
+				|| startsFreshArray(token);
 	}
 
 	// Parenthesis
@@ -598,6 +605,58 @@ public class Parser {
 	private boolean startsPopulatedArray(Token token) {
 		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET);
 	}
+	
+	// fresh array
+	private ParseNode parseFreshArray() {
+		if(!startsFreshArray(nowReading)) {
+			return syntaxErrorNode("empty array creation(fresh)");
+		}
+		Token freshToken = nowReading;
+		readToken();
+		expect(Punctuator.OPEN_SQUARE_BRACKET);
+		ParseNode type = parseType();
+		expect(Punctuator.CLOSE_SQUARE_BRACKET);
+		
+		expect(Punctuator.OPEN_PARENTHESIS);
+		ParseNode expr = parseExpression();
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		return FreshArrayNode.withChildren(freshToken, type, expr);
+	}
+	private boolean startsFreshArray(Token token) {
+		return token.isLextant(Keyword.FRESH);
+	}
+	
+	// type
+	private ParseNode parseType() {
+		if(startsParenthesis(nowReading)) {
+			readToken();
+			ParseNode type = parseType();
+			expect(Punctuator.CLOSE_PARENTHESIS);
+			return type;
+		}
+		
+		if(!startsType(nowReading)) {
+			return syntaxErrorNode("unvalid type");
+		}
+		
+		if(nowReading.isLextant(Keyword.ARRAY)) {
+			Token arrayToken = nowReading;
+			readToken();
+			expect(Punctuator.OPEN_SQUARE_BRACKET);
+			ParseNode child = parseType();
+			expect(Punctuator.CLOSE_SQUARE_BRACKET);
+			return TypeNode.withChildren(arrayToken, child);
+		} else {
+			Token typeToken = nowReading;
+			readToken();
+			return new TypeNode(typeToken);
+		}
+	}
+	private boolean startsType(Token token) {
+		return token.isLextant(Keyword.ARRAY, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL);
+	}
+	
+	
 	
 	// length
 	private ParseNode parseLength() {
