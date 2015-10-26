@@ -8,14 +8,16 @@ import semanticAnalyzer.types.Type;
 public class Binding {
 	private Type type;
 	private boolean immutablity;
+	private boolean canBeShadowed;
 	private TextLocation textLocation;
 	private MemoryLocation memoryLocation;
 	private String lexeme;
 	
-	public Binding(Type type, boolean isImmutable, TextLocation location, MemoryLocation memoryLocation, String lexeme) {
+	public Binding(Type type, TextLocation location, MemoryLocation memoryLocation, String lexeme) {
 		super();
 		this.type = type;
-		this.immutablity = isImmutable;
+		this.immutablity = true;				// immutablity is set to false by default
+		this.canBeShadowed = true;				// can be shadowed by default
 		this.textLocation = location;
 		this.memoryLocation = memoryLocation;
 		this.lexeme = lexeme;
@@ -25,7 +27,8 @@ public class Binding {
 	public String toString() {
 		return "[" + lexeme +
 				" " + type +  // " " + textLocation +	
-				" isImmutable" + immutablity + 
+				" isImmutable:" + immutablity + 
+				" canBeShadowed" + canBeShadowed +
 				" " + memoryLocation +
 				"]";
 	}	
@@ -38,7 +41,16 @@ public class Binding {
 	public boolean getImmutablity() {
 		return immutablity;
 	}
-	public TextLocation getLocation() {
+	public void setImmutablity(boolean IsImmutable) {
+		this.immutablity = IsImmutable;
+	}
+	public boolean canBeShadowed() {
+		return this.canBeShadowed;
+	}
+	public void setShadow(boolean can_be_shadowed) {
+		this.canBeShadowed = can_be_shadowed;
+	}
+ 	public TextLocation getLocation() {
 		return textLocation;
 	}
 	public MemoryLocation getMemoryLocation() {
@@ -59,7 +71,6 @@ public class Binding {
 		private static NullBinding instance=null;
 		private NullBinding() {
 			super(PrimitiveType.ERROR,
-					true,						// immutablity
 					TextLocation.nullInstance(),
 					MemoryLocation.nullInstance(),
 					"the-null-binding");

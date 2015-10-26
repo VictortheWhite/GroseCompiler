@@ -57,6 +57,21 @@ public class IdentifierNode extends ParseNode {
 		useBeforeDefineError();
 		return Binding.nullInstance();
 	}
+	
+	public boolean canBeShadowed() {
+		String identifier = token.getLexeme();
+		
+		for(ParseNode current : pathToRoot()) {
+			if(current.containsBindingOf(identifier)) {
+				if(!current.bindingOf(identifier).canBeShadowed()) {
+					cannotBeShadowedError();
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
 
 	public Scope getDeclarationScope() {
 		findVariableBinding();
@@ -66,6 +81,12 @@ public class IdentifierNode extends ParseNode {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer.identifierNode");
 		Token token = getToken();
 		log.severe("identifier " + token.getLexeme() + " used before defined at " + token.getLocation());
+	}
+	
+	public void cannotBeShadowedError() {
+		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer.identifierNode");
+		Token token = getToken();
+		log.severe("identifier " + token.getLexeme() + " cannot be shadowed at " + token.getLocation());
 	}
 	
 ///////////////////////////////////////////////////////////

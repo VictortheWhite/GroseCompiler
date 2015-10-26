@@ -86,7 +86,6 @@ public class RunTime {
 		
 		
 		frag.add(Label, STRING_CONCATENATION);		// [...R]	concatenation start (R being return address)
-		
 		// calculate length(C) 
 		frag.add(PushD, STRING_CONCA_ARG1);
 		frag.add(LoadI);							// [...R A]	A is arg1
@@ -172,7 +171,6 @@ public class RunTime {
 		frag.add(Label, arg1_End);	
 		frag.add(Pop);
 		frag.add(Pop); 								// [...R C C*]
-		
 
 		// copy B to C
 		frag.add(PushD, STRING_CONCA_ARG2);
@@ -209,7 +207,7 @@ public class RunTime {
 		frag.add(PushI, 0);
 		frag.add(StoreC); 							// [...R C]
 		frag.add(Exchange); 						// [...C R]
-		frag.add(PopPC);							// return
+		frag.add(Return);							// popPC
 		return frag;
 	}
 	

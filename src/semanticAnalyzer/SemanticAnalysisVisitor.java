@@ -79,6 +79,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		
 		identifier.setType(declarationType);
 		addBinding(identifier, declarationType);
+		
+		if(node.getToken().isLextant(Keyword.IMMUTABLE)) {
+			identifier.getBinding().setImmutablity(true);
+		}
+		else if(node.getToken().isLextant(Keyword.VARIABLE)) {
+			identifier.getBinding().setImmutablity(false);
+		}
 	}
 	@Override
 	public void visitLeave(ReassignmentNode node) {
@@ -94,16 +101,18 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 				reassignImmutableError(node, identifier.getToken().getLexeme());
 			}
 			target = identifier;		
-		} 
-		else {
-			exprNotTargetableError(node, node.child(0));
-			node.setType(PrimitiveType.ERROR);
-			return;
-		}
+			} 
+			else {
+				exprNotTargetableError(node, node.child(0));
+				node.setType(PrimitiveType.ERROR);
+				return;
+			}
 		
 		
 		if(!target.getType().equals(expr.getType())) {
 			typeCheckError(node, Arrays.asList(expr.getType(),expr.getType()));
+			node.setType(PrimitiveType.ERROR);
+			return;
 		}
 		node.setType(target.getType());
 
@@ -117,7 +126,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		if(condition.getType() != PrimitiveType.BOOLEAN) {
 			logError("Expected boolean type for if (condition)");
 			node.setType(PrimitiveType.ERROR);
-		}
+		} else
+			node.setType(condition.getType());
 	}
 	@Override
 	public void visitLeave(WhileStatementNode node) {
@@ -125,9 +135,39 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		if(condition.getType() != PrimitiveType.BOOLEAN) {
 			logError("Expected boolean type for if (condition)");
 			node.setType(PrimitiveType.ERROR);
-		}
+		} else
+			node.setType(condition.getType());
 	}
-
+	
+	@Override 
+	public void visitEnter(ForStatementNode node) {
+		enterSubscope(node);		
+		IdentifierNode itrIdentifierNode = (IdentifierNode)node.child(0);
+		itrIdentifierNode.setType(PrimitiveType.INTEGER);
+		// add identifier to binding
+		addBinding(itrIdentifierNode, PrimitiveType.INTEGER);
+		
+		// set itr to be immutable
+		itrIdentifierNode.getBinding().setImmutablity(true);
+		// itr cannot be shadowed
+		itrIdentifierNode.getBinding().setShadow(false);
+	}
+	@Override
+	public void visitLeave(ForStatementNode node) {
+		ParseNode arrayExprNode = node.child(1);
+		
+		if(!(arrayExprNode.getType() instanceof ArrayType)) {
+			logError("Expected array type in for(index id of array)");
+			node.setType(PrimitiveType.ERROR);
+		} 
+		else {
+			node.setType(arrayExprNode.getType());
+		}
+			
+		leaveScope(node);
+	}
+	
+	
 	///////////////////////////////////////////////////////////////////////////
 	// expressions
 	@Override
@@ -284,7 +324,6 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visit(IdentifierNode node) {
 		if(!isBeingDeclared(node)) {		
 			Binding binding = node.findVariableBinding();
-			
 			node.setType(binding.getType());
 			node.setBinding(binding);
 		}
@@ -292,9 +331,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	private boolean isBeingDeclared(IdentifierNode node) {
 		ParseNode parent = node.getParent();
-		return (parent instanceof DeclarationNode) && (node == parent.child(0));
+		return (parent instanceof DeclarationNode) && (node == parent.child(0)) 
+				||(parent instanceof ForStatementNode) &&(node == parent.child(0));
 	}
 	private void addBinding(IdentifierNode identifierNode, Type type) {
+		if(!identifierNode.canBeShadowed()) {
+			identifierNode.setBinding(Binding.nullInstance());
+		}
 		Scope scope = identifierNode.getLocalScope();
 		Binding binding = scope.createBinding(identifierNode, type);
 		identifierNode.setBinding(binding);

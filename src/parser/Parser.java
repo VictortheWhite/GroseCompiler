@@ -283,8 +283,19 @@ public class Parser {
 	
 	// forStem -> for ( index identifier for arrayType) block
 	private ParseNode parseForStatement() {
-		//just to get the program running
-		return new ParseNode(nowReading);
+		if(!startsForStatement(nowReading)) {
+			return syntaxErrorNode("forStatement");
+		}
+		Token forStatementToken = nowReading;
+		readToken();
+		expect(Punctuator.OPEN_PARENTHESIS);
+		expect(Keyword.INDEX);
+		ParseNode itr = parseIdentifier();
+		expect(Keyword.OF);
+		ParseNode array = parseExpression();
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		ParseNode block = parseBlock();
+		return ForStatementNode.withChildren(forStatementToken, itr, array, block);
 	}
 	private boolean startsForStatement(Token token) {
 		return token.isLextant(Keyword.FOR);

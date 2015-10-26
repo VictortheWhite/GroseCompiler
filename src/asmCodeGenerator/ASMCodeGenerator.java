@@ -17,6 +17,7 @@ import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.ForStatementNode;
 import parseTree.nodeTypes.FreshArrayNode;
 import parseTree.nodeTypes.LengthOperatorNode;
 import parseTree.nodeTypes.MainBlockNode;
@@ -386,9 +387,10 @@ public class ASMCodeGenerator {
 			
 			code.append(lvalue);
 			code.append(rvalue);
-			
+
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
+
 		}
 		public void visitLeave(ReassignmentNode node) {
 			newVoidCode(node);
@@ -462,6 +464,58 @@ public class ASMCodeGenerator {
 			code.append(Block);
 			code.add(Jump, startsLoopLabel);
 			code.add(Label, endsLoopLabel);
+		}
+		
+		public void visitLeave(ForStatementNode node) {
+			ASMCodeFragment itrAdr = removeAddressCode(node.child(0));
+			ASMCodeFragment arrayExpr = removeValueCode(node.child(1));
+			ASMCodeFragment block = removeVoidCode(node.child(2));
+			
+			String startLoopLabel = labeller.newLabel("for-loop-start", "");
+			String endLoopLabel = labeller.newLabelSameNumber("for-loop-end", "");
+			String itrAdrPtr = labeller.newLabelSameNumber("$for-loop-itr-pointer", "");
+			
+			
+			
+			newVoidCode(node);
+			
+			code.add(DLabel, itrAdrPtr);
+			code.add(DataI, 0);
+			
+			code.append(itrAdr);			// [...itrAdr]
+			code.add(Duplicate);
+			code.add(PushD, itrAdrPtr);
+			code.add(Exchange);
+			code.add(StoreI);				// [...itrAdr]	*p = i;
+			code.add(PushI, 0);
+			code.add(StoreI);			// i = 0
+			code.append(arrayExpr);		
+			code.add(PushI, 13);
+			code.add(Add);
+			code.add(LoadI);			// [...n]
+			
+			code.add(Label, startLoopLabel);
+			code.add(Duplicate);		// [...n n]
+			code.add(PushD,itrAdrPtr);
+			code.add(LoadI);
+			code.add(LoadI);			// [...n n i]
+				//code.add(PStack);
+			code.add(Subtract);			// [...n n-i]
+			code.add(JumpFalse,endLoopLabel);	// if i < n, continue 	(n-i>0)	
+			code.append(block);
+			code.add(PushD,itrAdrPtr);
+			code.add(LoadI);			// [...n itrAdr]
+			code.add(Duplicate);
+			code.add(LoadI);			// [...n itrAdr i]
+			code.add(PushI, 1);
+			code.add(Add);				
+			code.add(StoreI);			// [...n]	i++
+			code.add(Jump, startLoopLabel);
+			code.add(Label, endLoopLabel);
+			code.add(Pop);
+			
+				//code.add(PStack);
+			
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -643,7 +697,7 @@ public class ASMCodeGenerator {
 			code.add(Exchange); 								// [...arg1_addr arg1]
 			code.add(StoreI); 									// [...]
 			code.add(Call, RunTime.STRING_CONCATENATION);		// [...R] 	R being return address(current PC +1)
-			
+				//code.add(PStack);
 		}
 
 		
