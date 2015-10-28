@@ -5,6 +5,7 @@ import java.util.List;
 
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
+import lexicalAnalyzer.Punctuator;
 import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
@@ -251,7 +252,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	
 	public void visitLeave(TypeNode node) {
 		assert node.nChildren() == 1;
-		assert node.getToken().isLextant(Keyword.ARRAY);
+		assert node.getToken().isLextant(Punctuator.OPEN_SQUARE_BRACKET);
 		
 		node.setType(new ArrayType(node.child(0).getType()));
 	}

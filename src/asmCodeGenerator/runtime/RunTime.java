@@ -343,7 +343,7 @@ public class RunTime {
 		String arrayNegativeSizeCreationErrorMessage = "$errors-array-negative-creation";
 		
 		frag.add(DLabel, arrayNegativeSizeCreationErrorMessage);
-		frag.add(DataS, "array size cannnot be negative");
+		frag.add(DataS, "array size cannot be negative");
 		
 		frag.add(Label, ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR);
 		frag.add(PushD, arrayNegativeSizeCreationErrorMessage);

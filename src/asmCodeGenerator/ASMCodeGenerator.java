@@ -499,7 +499,6 @@ public class ASMCodeGenerator {
 			code.add(PushD,itrAdrPtr);
 			code.add(LoadI);
 			code.add(LoadI);			// [...n n i]
-				//code.add(PStack);
 			code.add(Subtract);			// [...n n-i]
 			code.add(JumpFalse,endLoopLabel);	// if i < n, continue 	(n-i>0)	
 			code.append(block);
@@ -514,7 +513,6 @@ public class ASMCodeGenerator {
 			code.add(Label, endLoopLabel);
 			code.add(Pop);
 			
-				//code.add(PStack);
 			
 		}
 
@@ -697,7 +695,6 @@ public class ASMCodeGenerator {
 			code.add(Exchange); 								// [...arg1_addr arg1]
 			code.add(StoreI); 									// [...]
 			code.add(Call, RunTime.STRING_CONCATENATION);		// [...R] 	R being return address(current PC +1)
-				//code.add(PStack);
 		}
 
 		

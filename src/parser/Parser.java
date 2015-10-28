@@ -129,6 +129,9 @@ public class Parser {
 		if(startsForStatement(nowReading)) {
 			return parseForStatement();
 		}
+		if(startsBlock(nowReading)) {
+			return parseBlock();
+		}
 		assert false : "bad token " + nowReading + " in parseStatement()";
 		return null;
 	}
@@ -138,7 +141,8 @@ public class Parser {
 			   startsReassignment(token) ||
 			   startsIfStatement(token) ||
 			   startsWhileStatement(token) ||
-			   startsForStatement(token);
+			   startsForStatement(token) ||
+			   startsBlock(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -602,6 +606,7 @@ public class Parser {
 		
 	}
 	private ParseNode parseExpressionList(ParseNode node) {
+		
 		ParseNode newExpr = parseExpression();
 		node.appendChild(newExpr);
 		while(nowReading.isLextant(Punctuator.SEPARATOR)) {
@@ -650,10 +655,9 @@ public class Parser {
 			return syntaxErrorNode("unvalid type");
 		}
 		
-		if(nowReading.isLextant(Keyword.ARRAY)) {
+		if(nowReading.isLextant(Punctuator.OPEN_SQUARE_BRACKET)) {
 			Token arrayToken = nowReading;
 			readToken();
-			expect(Punctuator.OPEN_SQUARE_BRACKET);
 			ParseNode child = parseType();
 			expect(Punctuator.CLOSE_SQUARE_BRACKET);
 			return TypeNode.withChildren(arrayToken, child);
@@ -664,7 +668,7 @@ public class Parser {
 		}
 	}
 	private boolean startsType(Token token) {
-		return token.isLextant(Keyword.ARRAY, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL);
+		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL);
 	}
 	
 	
