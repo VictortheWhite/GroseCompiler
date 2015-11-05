@@ -5,6 +5,7 @@ import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
+import tokens.IdentifierToken;
 import tokens.LextantToken;
 import tokens.Token;
 import semanticAnalyzer.types.*;
@@ -14,7 +15,8 @@ public class TypeNode extends ParseNode {
 	
 	public TypeNode(Token token) {
 		super(token);
-		assert(token.isLextant(Punctuator.OPEN_SQUARE_BRACKET, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL));
+		assert(token.isLextant(Punctuator.OPEN_SQUARE_BRACKET, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL) ||
+				token instanceof IdentifierToken);
 	}
 	public TypeNode(ParseNode node) {
 		super(node);

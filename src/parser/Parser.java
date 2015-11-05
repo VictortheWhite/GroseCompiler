@@ -35,13 +35,18 @@ public class Parser {
 
 	////////////////////////////////////////////////////////////
 	// "program" is the start symbol S
-	// S -> MAIN mainBlock
+	// S -> globalDefinition* MAIN mainBlock
 	
 	private ParseNode parseProgram() {
 		if(!startsProgram(nowReading)) {
 			return syntaxErrorNode("program");
 		}
 		ParseNode program = new ProgramNode(nowReading);
+		
+		while(startsGlobalDefinition(nowReading)) {
+			ParseNode globalDef = parseGlobalDefinition();
+			program.appendChild(globalDef);
+		}
 		
 		expect(Keyword.MAIN);
 		ParseNode mainBlock = parseMainBlock();
@@ -54,9 +59,101 @@ public class Parser {
 		return program;
 	}
 	private boolean startsProgram(Token token) {
-		return token.isLextant(Keyword.MAIN);
+		return token.isLextant(Keyword.MAIN) || startsGlobalDefinition(token);
 	}
 	
+	///////////////////////////////////////////////////////////
+	// globalDefinition
+	
+	// globalDefinition -> tupleDefinition
+	//					   functionDefinition
+	private ParseNode parseGlobalDefinition() {
+		if(!startsGlobalDefinition(nowReading)) {
+			return syntaxErrorNode("Global Definiton");
+		}
+		
+		if(startsTupleDefinition(nowReading))
+			return parseTupleDefinition();
+		
+		assert false : "bad token " + nowReading + " in parseGlobalDefinition()";
+		return null;		
+	}
+	
+	private boolean startsGlobalDefinition(Token token) {
+		return startsTupleDefinition(token);
+	}
+	
+	// tupleDefinition
+	// tupleDefinition -> tuple identifier parameterTuple
+	private ParseNode parseTupleDefinition() {
+		if(!startsTupleDefinition(nowReading)) {
+			return syntaxErrorNode("TupleDefinition");
+		}
+		Token tupleDefToken = nowReading;
+		readToken();
+		
+		ParseNode tupleName = parseIdentifier();
+		ParseNode parameterTuple = parseParameterTuple();
+		expect(Punctuator.TERMINATOR);
+		return TupleDefinitionNode.withChildren(tupleDefToken, tupleName, parameterTuple);
+	}
+	
+	private boolean startsTupleDefinition(Token token) {
+		return token.isLextant(Keyword.TUPLE);
+	}
+	
+	// parameterTuple -> ( parameterList )
+	//					| identifier
+	
+	private ParseNode parseParameterTuple() {
+		ParameterTupleNode result = new ParameterTupleNode(nowReading);
+		if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
+			readToken();
+			result = parseParameterList(result);
+			expect(Punctuator.CLOSE_PARENTHESIS);
+		} else {
+			ParseNode identifier = parseIdentifier();
+			result.appendChild(identifier);
+		}
+		
+		return result;
+		
+		
+	}
+	
+	// parameterList -> [ parameterSpecification [, parameterSpecification]* ]  
+	// zero or more comma-seperated parameterSpecifications
+	
+	private ParameterTupleNode parseParameterList(ParameterTupleNode parent) {
+		if(startsParameterSpecification(nowReading)) {
+			ParseNode paraSpecNode = parseParameterSpecification();
+			parent.appendChild(paraSpecNode);
+			
+			while(nowReading.isLextant(Punctuator.SEPARATOR)) {
+				readToken();
+				paraSpecNode = parseParameterSpecification();
+				parent.appendChild(paraSpecNode);
+			}
+		}
+		
+		return parent;
+	}
+	// parameterSpecification -> type identifier
+	private ParseNode parseParameterSpecification() {
+		if(!startsParameterSpecification(nowReading)) {
+			return syntaxErrorNode("Parameter Specification");
+		}
+		
+		Token ParaSpecToken = nowReading;
+		ParseNode type = parseType();
+		ParseNode attributeName = parseIdentifier();
+		
+		return ParameterSpecificationNode.withChildren(ParaSpecToken, type, attributeName);
+	}
+	
+	private boolean startsParameterSpecification(Token token) {
+		return startsType(token);
+	}
 	
 	///////////////////////////////////////////////////////////
 	// MainBlock
@@ -668,7 +765,8 @@ public class Parser {
 		}
 	}
 	private boolean startsType(Token token) {
-		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL);
+		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET, Keyword.INT, Keyword.FLOAT, Keyword.CHAR, Keyword.STRING, Keyword.BOOL)
+				|| startsIdentifier(token);
 	}
 	
 	

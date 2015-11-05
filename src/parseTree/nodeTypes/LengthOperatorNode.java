@@ -1,5 +1,3 @@
-
-
 package parseTree.nodeTypes;
 
 import parseTree.ParseNode;
