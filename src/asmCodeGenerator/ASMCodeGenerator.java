@@ -16,7 +16,9 @@ import parseTree.nodeTypes.ArrayIndexingNode;
 import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
+import parseTree.nodeTypes.BreakContinueStatementNode;
 import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.ForControlPhraseNode;
 import parseTree.nodeTypes.ForStatementNode;
 import parseTree.nodeTypes.FreshArrayNode;
 import parseTree.nodeTypes.LengthOperatorNode;
@@ -449,70 +451,170 @@ public class ASMCodeGenerator {
 			code.add(Label, endIfElseStatementLabel);
 
 		}
-		
+		public void visitEnter(WhileStatementNode node) {
+			node.setStartLabel(labeller.newLabel("while-loop-start", ""));
+			node.setEndLabel(labeller.newLabelSameNumber("while-loop-end", ""));
+		}
 		public void visitLeave(WhileStatementNode node) {
 			newVoidCode(node);
-			ASMCodeFragment condition = removeValueCode(node.child(0));
+			
+			String startsLoopLabel = node.getStartLabel(); 
+			String endsLoopLabel = node.getEndLabel();
+					
 			ASMCodeFragment Block = removeVoidCode(node.child(1));
 			
-			String startsLoopLabel = labeller.newLabel("while-loop-start", ""); 
-			String endsLoopLabel = labeller.newLabelSameNumber("while-loop-end", "");
+			if(node.child(0) instanceof ForControlPhraseNode) {		// while(ever) { }
+				code.add(Label, startsLoopLabel);
+				code.append(Block);
+				code.add(Jump, startsLoopLabel);
+				code.add(Label, endsLoopLabel);
+			} else {												// while(expr) { }
+				ASMCodeFragment condition = removeValueCode(node.child(0));
+
+				code.add(Label, startsLoopLabel);
+				code.append(condition);
+				code.add(JumpFalse, endsLoopLabel);
+				code.append(Block);
+				code.add(Jump, startsLoopLabel);
+				code.add(Label, endsLoopLabel);
+			}
 			
-			code.add(Label, startsLoopLabel);
-			code.append(condition);
-			code.add(JumpFalse, endsLoopLabel);
-			code.append(Block);
-			code.add(Jump, startsLoopLabel);
-			code.add(Label, endsLoopLabel);
+			
 		}
 		
+		public void visitEnter(ForStatementNode node) {
+			node.setStartLabel(labeller.newLabel("for-loop-start", ""));
+			node.setEndLabel(labeller.newLabelSameNumber("for-loop-end", ""));
+			node.setContinuelabel(labeller.newLabelSameNumber("for-loop-continue", ""));
+		}
 		public void visitLeave(ForStatementNode node) {
-			ASMCodeFragment itrAdr = removeAddressCode(node.child(0));
-			ASMCodeFragment arrayExpr = removeValueCode(node.child(1));
-			ASMCodeFragment block = removeVoidCode(node.child(2));
 			
-			String startLoopLabel = labeller.newLabel("for-loop-start", "");
-			String endLoopLabel = labeller.newLabelSameNumber("for-loop-end", "");
-			String itrAdrPtr = labeller.newLabelSameNumber("$for-loop-itr-pointer", "");
+			String startLoopLabel = node.getStartLabel();
+			String endLoopLabel = node.getEndLabel();
+			String continueLoopLabel = node.getContinueLabel();
 			
-			
+			ParseNode forCtlNode = node.child(0);
+			ASMCodeFragment block = removeVoidCode(node.child(1));
 			
 			newVoidCode(node);
+			if(forCtlNode.getToken().isLextant(Keyword.EVER)) {
+				code.add(Label, startLoopLabel);			// loop forever
+				code.add(Label, continueLoopLabel);
+				code.append(block);
+				code.add(Jump, startLoopLabel);
+				code.add(Label, endLoopLabel);
+			} else if(forCtlNode.getToken().isLextant(Keyword.ELEMENT)) {
+				
+				String elementAdrPtr = labeller.newLabel("$for-loop-element-pointer", "");
+				String itrAdr = labeller.newLabelSameNumber("$for-loop-itr-adr", "");
+				
+				Type subTypeOfArray = ((ArrayType)forCtlNode.child(1).getType()).getSubType();
+				ASMOpcode loadElementOpcode = LoadArrayOpcode(subTypeOfArray);
+				ASMOpcode storeElementOpcode = opcodeForStore(subTypeOfArray);
+				
+				ASMCodeFragment elementAdr = removeAddressCode(forCtlNode.child(0));
+				ASMCodeFragment arrayExpr = removeValueCode(forCtlNode.child(1));
+				
+				
+				code.add(DLabel, elementAdrPtr);
+				code.add(DataI, 0);
+				code.add(DLabel, itrAdr);
+				code.add(DataI, 0);
+				// store eleAdr to elementAdrPtr
+				code.append(elementAdr);			// [...eleAdr]
+				code.add(PushD, elementAdrPtr);		
+				code.add(Exchange);
+				code.add(StoreI);				// [...]	*elePtr = ele;
+				// initialize i to 0
+				code.add(PushD, itrAdr);
+				code.add(PushI, 0);
+				code.add(StoreI);			// i = 0
+				code.append(arrayExpr);		// [...arrayStart]
+				// load array-length n
+				code.add(Duplicate);		// [...arrayStart arrayStart]
+				code.add(PushI, 13);
+				code.add(Add);
+				code.add(LoadI);			// [...arrayStart n]
+				
+				code.add(Label, startLoopLabel);
+				code.add(Duplicate);		// [...arrayStart n n]
+				code.add(PushD,itrAdr);
+				code.add(LoadI);			// [...arrayStart n n i]
+				code.add(Subtract);			// [...arrayStart n n-i]
+				code.add(JumpFalse,endLoopLabel);	// if i < n, continue 	(n-i>0)		
+				// load a[i] to ele before block starts
+				code.add(Exchange);
+				code.add(Duplicate);		// [...n arrayStart arrayStart]
+				code.add(PushD, elementAdrPtr);
+				//code.add(LoadI);
+				code.add(LoadI);			// [...n arrayStart arrayStart eleAdr]
+				code.add(Exchange);			// [...n arrayStart eleAdr arrayStart]
+				code.add(PushD, itrAdr);
+				code.add(LoadI);
+				code.add(PushI, subTypeOfArray.getSize());
+				code.add(Multiply);
+				code.add(PushI, 17);
+				code.add(Add);
+				code.add(Add);				// 13 + i*size
+				code.add(loadElementOpcode);// [...n arrayStart eleAdr a[0]]
+				code.add(storeElementOpcode);//[...n arrayStart]
+				code.add(Exchange);			// [...arrayStart n]
+				// block start
+				code.append(block);
+				code.add(Label, continueLoopLabel);	// continue Label
+				// i++
+				code.add(PushD,itrAdr);
+				code.add(Duplicate);		// [...arrayStart n itrAdr itrAdr]
+				code.add(LoadI);			// [...arrayStart n itrAdr i]
+				code.add(PushI, 1);
+				code.add(Add);				
+				code.add(StoreI);			// [...arrayStart n]	i++
+				code.add(Jump, startLoopLabel);
+				code.add(Label, endLoopLabel);
+				code.add(Pop);
+				code.add(Pop);
+				
+			} else if(forCtlNode.getToken().isLextant(Keyword.INDEX)) {
+				String itrAdrPtr = labeller.newLabel("$for-loop-itr-pointer", "");
+				ASMCodeFragment itrAdr = removeAddressCode(forCtlNode.child(0));
+				ASMCodeFragment arrayExpr = removeValueCode(forCtlNode.child(1));
+
+				
+				code.add(DLabel, itrAdrPtr);
+				code.add(DataI, 0);
 			
-			code.add(DLabel, itrAdrPtr);
-			code.add(DataI, 0);
+				code.append(itrAdr);			// [...itrAdr]
+				code.add(Duplicate);
+				code.add(PushD, itrAdrPtr);
+				code.add(Exchange);
+				code.add(StoreI);				// [...itrAdr]	*p = i;
+				code.add(PushI, 0);
+				code.add(StoreI);			// i = 0
+				code.append(arrayExpr);		
+				code.add(PushI, 13);
+				code.add(Add);
+				code.add(LoadI);			// [...n]
 			
-			code.append(itrAdr);			// [...itrAdr]
-			code.add(Duplicate);
-			code.add(PushD, itrAdrPtr);
-			code.add(Exchange);
-			code.add(StoreI);				// [...itrAdr]	*p = i;
-			code.add(PushI, 0);
-			code.add(StoreI);			// i = 0
-			code.append(arrayExpr);		
-			code.add(PushI, 13);
-			code.add(Add);
-			code.add(LoadI);			// [...n]
-			
-			code.add(Label, startLoopLabel);
-			code.add(Duplicate);		// [...n n]
-			code.add(PushD,itrAdrPtr);
-			code.add(LoadI);
-			code.add(LoadI);			// [...n n i]
-			code.add(Subtract);			// [...n n-i]
-			code.add(JumpFalse,endLoopLabel);	// if i < n, continue 	(n-i>0)	
-			code.append(block);
-			code.add(PushD,itrAdrPtr);
-			code.add(LoadI);			// [...n itrAdr]
-			code.add(Duplicate);
-			code.add(LoadI);			// [...n itrAdr i]
-			code.add(PushI, 1);
-			code.add(Add);				
-			code.add(StoreI);			// [...n]	i++
-			code.add(Jump, startLoopLabel);
-			code.add(Label, endLoopLabel);
-			code.add(Pop);
-			
+				code.add(Label, startLoopLabel);
+				code.add(Duplicate);		// [...n n]
+				code.add(PushD,itrAdrPtr);
+				code.add(LoadI);
+				code.add(LoadI);			// [...n n i]
+				code.add(Subtract);			// [...n n-i]
+				code.add(JumpFalse,endLoopLabel);	// if i < n, continue 	(n-i>0)	
+				code.append(block);
+				code.add(Label, continueLoopLabel);	// continuelabel
+				code.add(PushD,itrAdrPtr);
+				code.add(LoadI);			// [...n itrAdr]
+				code.add(Duplicate);
+				code.add(LoadI);			// [...n itrAdr i]
+				code.add(PushI, 1);
+				code.add(Add);				
+				code.add(StoreI);			// [...n]	i++
+				code.add(Jump, startLoopLabel);
+				code.add(Label, endLoopLabel);
+				code.add(Pop);
+			}
 			
 		}
 
@@ -535,6 +637,7 @@ public class ASMCodeGenerator {
 				visitNormalBinaryOperatorNode(node);
 			}
 		}
+				
 		private boolean isComparisonOperator(Lextant operator) {
 			return operator==Punctuator.GREATER || operator==Punctuator.LESS || operator==Punctuator.GREATEROFEQUAL 
 					|| operator==Punctuator.LESSOFEQUAL || operator==Punctuator.EQUAL || operator==Punctuator.NOTEQUAL;
@@ -1044,6 +1147,10 @@ public class ASMCodeGenerator {
 			header.addHeader(code, node);
 			code.add(DataS, node.getValue());
 			code.add(PushD, stringLabel);
+		}
+		public void visit(BreakContinueStatementNode node) {
+			newVoidCode(node);			
+			code.add(Jump, node.getJumpLabel());
 		}
 	}
 

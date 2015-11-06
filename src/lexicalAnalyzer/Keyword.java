@@ -26,7 +26,12 @@ public enum Keyword implements Lextant {
 	WHILE("while"),
 	FOR("for"),
 	INDEX("index"),
+	ELEMENT("element"),
 	OF("of"),
+	EVER("ever"),
+	COUNT("count"),
+	BREAK("break"),
+	CONTINUE("continue"),
 	MAIN("main"),
 	NULL_KEYWORD("");
 

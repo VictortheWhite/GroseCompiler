@@ -30,6 +30,9 @@ public interface ParseNodeVisitor {
 	void visitEnter(ForStatementNode node);
 	void visitLeave(ForStatementNode node);
 	
+	void visitEnter(ForControlPhraseNode node);
+	void visitLeave(ForControlPhraseNode node);
+		
 	void visitEnter(PrintStatementNode node);
 	void visitLeave(PrintStatementNode node);
 	
@@ -53,6 +56,16 @@ public interface ParseNodeVisitor {
 	
 	void visitEnter(ArrayIndexingNode node);
 	void visitLeave(ArrayIndexingNode node);
+
+	
+	void visitEnter(TupleDefinitionNode node);
+	void visitLeave(TupleDefinitionNode node);
+	
+	void visitEnter(ParameterTupleNode node);
+	void visitLeave(ParameterTupleNode node);
+	
+	void visitEnter(ParameterSpecificationNode node);
+	void visitLeave(ParameterSpecificationNode node);
 	
 	void visitEnter(TypeNode node);
 	void visitLeave(TypeNode node);
@@ -68,6 +81,7 @@ public interface ParseNodeVisitor {
 	void visit(NewlineNode node);
 	void visit(SeparatorNode node);
 	void visit(TypeNode node);
+	void visit(BreakContinueStatementNode node);
 
 	
 	public static class Default implements ParseNodeVisitor
@@ -130,6 +144,12 @@ public interface ParseNodeVisitor {
 		public void visitLeave(ForStatementNode node) {
 			defaultVisitLeave(node);
 		}
+		public void visitEnter(ForControlPhraseNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ForControlPhraseNode node) {
+			defaultVisitLeave(node);
+		}
 		public void visitEnter(PrintStatementNode node) {
 			defaultVisitEnter(node);
 		}
@@ -178,6 +198,24 @@ public interface ParseNodeVisitor {
 		public void visitLeave(ArrayIndexingNode node) {
 			defaultVisitLeave(node);
 		}
+		public void visitEnter(TupleDefinitionNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(TupleDefinitionNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(ParameterTupleNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ParameterTupleNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(ParameterSpecificationNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ParameterSpecificationNode node) {
+			defaultVisitLeave(node);
+		}		
 		public void visitEnter(TypeNode node) {
 			defaultVisitLeave(node);
 		}
@@ -216,6 +254,10 @@ public interface ParseNodeVisitor {
 		public void visit(TypeNode node) {
 			defaultVisitForLeaf(node);
 		}
+		public void visit(BreakContinueStatementNode node) {
+			defaultVisitForLeaf(node);
+		}
+
 	}
 
 

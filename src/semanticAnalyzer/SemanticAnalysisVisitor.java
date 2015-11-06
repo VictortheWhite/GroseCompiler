@@ -17,6 +17,7 @@ import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.Scope;
+import tokens.IdentifierToken;
 import tokens.LextantToken;
 import tokens.Token;
 
@@ -37,8 +38,10 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		leaveScope(node);
 	}
 	public void visitEnter(MainBlockNode node) {
+		enterSubscope(node);
 	}
 	public void visitLeave(MainBlockNode node) {
+		leaveScope(node);
 	}
 	@Override
 	public void visitEnter(BlockNode node) {
@@ -133,6 +136,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override
 	public void visitLeave(WhileStatementNode node) {
 		ParseNode condition = node.child(0);
+		
+		if(condition instanceof ForControlPhraseNode) {
+			assert condition.getToken().isLextant(Keyword.EVER);	// while(ever) { }
+			node.setType(PrimitiveType.NO_TYPE);
+			return;
+		}
+		
 		if(condition.getType() != PrimitiveType.BOOLEAN) {
 			logError("Expected boolean type for if (condition)");
 			node.setType(PrimitiveType.ERROR);
@@ -143,29 +153,42 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override 
 	public void visitEnter(ForStatementNode node) {
 		enterSubscope(node);		
-		IdentifierNode itrIdentifierNode = (IdentifierNode)node.child(0);
-		itrIdentifierNode.setType(PrimitiveType.INTEGER);
-		// add identifier to binding
-		addBinding(itrIdentifierNode, PrimitiveType.INTEGER);
-		
-		// set itr to be immutable
-		itrIdentifierNode.getBinding().setImmutablity(true);
-		// itr cannot be shadowed
-		itrIdentifierNode.getBinding().setShadow(false);
 	}
 	@Override
 	public void visitLeave(ForStatementNode node) {
-		ParseNode arrayExprNode = node.child(1);
-		
-		if(!(arrayExprNode.getType() instanceof ArrayType)) {
-			logError("Expected array type in for(index id of array)");
-			node.setType(PrimitiveType.ERROR);
-		} 
-		else {
-			node.setType(arrayExprNode.getType());
-		}
-			
+
 		leaveScope(node);
+	}
+	@Override
+	public void visitEnter(ForControlPhraseNode node) {
+		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT)) {
+			IdentifierNode itrIdentifierNode = (IdentifierNode)node.child(0);
+			itrIdentifierNode.setType(PrimitiveType.INTEGER);
+			// add identifier to binding
+			addBinding(itrIdentifierNode, PrimitiveType.INTEGER);
+			
+			// set itr to be immutable
+			itrIdentifierNode.getBinding().setImmutablity(true);
+			// itr cannot be shadowed
+			itrIdentifierNode.getBinding().setShadow(false);
+		}
+		if(node.getToken().isLextant(Keyword.COUNT)) {
+			// do something
+		}
+	}
+	@Override
+	public void visitLeave(ForControlPhraseNode node) {
+		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT)) {
+			ParseNode arrayExprNode = node.child(1);
+			
+			if(!(arrayExprNode.getType() instanceof ArrayType)) {
+				logError("Expected array type in for(index id of array)");
+				node.setType(PrimitiveType.ERROR);
+			} 
+			else {
+				node.setType(arrayExprNode.getType());
+			}			
+		}
 	}
 	
 	
@@ -305,19 +328,25 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visit(CharacterConstantNode node) {
 		node.setType(PrimitiveType.CHARACTER);
 	}
+	@Override
 	public void visit(StringConstantNode node) {
 		node.setType(PrimitiveType.STRING);
 	}
+	@Override
 	public void visit(TypeNode node) {
+		if(node.getToken() instanceof IdentifierToken ) {
+			return;
+		}
+		
 		node.setType(node.getPrimitiveType());
 	}
 	@Override
 	public void visit(NewlineNode node) {
-//		node.setType(PrimitiveType.INTEGER);
+//		node.setType(PrimitiveType.NO_TYPE);
 	}
 	@Override
 	public void visit(SeparatorNode node) {
-//		node.setType(PrimitiveType.INTEGER);
+//		node.setType(PrimitiveType.NO_TYPE);
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// IdentifierNodes, with helper methods

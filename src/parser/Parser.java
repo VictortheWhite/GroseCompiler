@@ -226,6 +226,9 @@ public class Parser {
 		if(startsForStatement(nowReading)) {
 			return parseForStatement();
 		}
+		if(startsBreakContinue(nowReading)) {
+			return parseBreakContinue();
+		}
 		if(startsBlock(nowReading)) {
 			return parseBlock();
 		}
@@ -239,7 +242,8 @@ public class Parser {
 			   startsIfStatement(token) ||
 			   startsWhileStatement(token) ||
 			   startsForStatement(token) ||
-			   startsBlock(token);
+			   startsBlock(token) ||
+			   startsBreakContinue(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -373,7 +377,7 @@ public class Parser {
 		Token WhileStatementToken = nowReading;
 		readToken();
 		expect(Punctuator.OPEN_PARENTHESIS);
-		ParseNode condition = parseExpression();
+		ParseNode condition = parseWhileConditon();
 		expect(Punctuator.CLOSE_PARENTHESIS);
 		ParseNode block = parseBlock();
 		return WhileStatementNode.withChildren(WhileStatementToken, condition, block);
@@ -382,7 +386,25 @@ public class Parser {
 		return token.isLextant(Keyword.WHILE);
 	}
 	
-	// forStem -> for ( index identifier for arrayType) block
+	private ParseNode parseWhileConditon() {
+		if(!startsWhileCondition(nowReading)) {
+			return syntaxErrorNode("while condition");
+		}
+		
+		if(startsExpression(nowReading)) 
+			return parseExpression();
+		if(nowReading.isLextant(Keyword.EVER)) {
+			readToken();
+			return new ForControlPhraseNode(previouslyRead);
+		}
+		
+		assert false;
+		return null;
+	}
+	private boolean startsWhileCondition(Token token) {
+		return startsExpression(token) || token.isLextant(Keyword.EVER);
+	}
+	// forStem -> for ( forControlPhrase ) block
 	private ParseNode parseForStatement() {
 		if(!startsForStatement(nowReading)) {
 			return syntaxErrorNode("forStatement");
@@ -390,20 +412,64 @@ public class Parser {
 		Token forStatementToken = nowReading;
 		readToken();
 		expect(Punctuator.OPEN_PARENTHESIS);
-		expect(Keyword.INDEX);
-		ParseNode itr = parseIdentifier();
-		expect(Keyword.OF);
-		ParseNode array = parseExpression();
+		ParseNode forCtlPhrase = parseForControlPhrase();
 		expect(Punctuator.CLOSE_PARENTHESIS);
 		ParseNode block = parseBlock();
-		return ForStatementNode.withChildren(forStatementToken, itr, array, block);
+		return ForStatementNode.withChildren(forStatementToken, forCtlPhrase, block);
 	}
 	private boolean startsForStatement(Token token) {
 		return token.isLextant(Keyword.FOR);
 	}
 	
+	// forControlPhrase ->	index id of expr
+	//						element id of exp
+	//						ever
+	//						count (expression lessOp)? identifier lessOp expression
 	
+	private ParseNode parseForControlPhrase() {
+		if(!startsForControlPhrase(nowReading)) {
+			return syntaxErrorNode("For Control Phrase");
+		}
+		ForControlPhraseNode result = new ForControlPhraseNode(nowReading);
+		if(nowReading.isLextant(Keyword.INDEX, Keyword.ELEMENT)) {	
+			readToken();
+			ParseNode itr = parseIdentifier();
+			expect(Keyword.OF);
+			ParseNode array = parseExpression();
+			
+			result.appendChild(itr);
+			result.appendChild(array);
+		}
+		if(nowReading.isLextant(Keyword.COUNT)){
+			readToken();
+		}
+		if(nowReading.isLextant(Keyword.EVER))
+			readToken();
+		
+		return result;
 
+	}
+	
+	private boolean startsForControlPhrase(Token token) {
+		return token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT);
+	}
+	
+	// break and continue stmt
+	// BreakContinueStmt -> [break | continue] ;
+	
+	private ParseNode parseBreakContinue() {
+		if(!startsBreakContinue(nowReading)) {
+			return syntaxErrorNode("break-continue");
+		}
+		Token breakContinueToken = nowReading;
+		readToken();
+		expect(Punctuator.TERMINATOR);
+		return new BreakContinueStatementNode(breakContinueToken);
+	}
+	
+	private boolean startsBreakContinue(Token token) {
+		return token.isLextant(Keyword.CONTINUE, Keyword.BREAK);
+	}
 	
 	///////////////////////////////////////////////////////////
 	// expressions

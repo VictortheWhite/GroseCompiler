@@ -7,19 +7,39 @@ import tokens.Token;
 
 public class WhileStatementNode extends ParseNode {
 
+	private String startLoopLabel;
+	private String endLoopLabel;
+	
 	public WhileStatementNode(Token token) {
 		super(token);
 		assert(token.isLextant(Keyword.WHILE));
+		startLoopLabel = "";
+		endLoopLabel = "";
 	}
 
 	public WhileStatementNode(ParseNode node) {
 		super(node);
+		startLoopLabel = "";
+		endLoopLabel = "";
 	}
 	
 	
 	////////////////////////////////////////////////////////////
 	// attributes
 	
+	public void setStartLabel(String startLabel) {
+		this.startLoopLabel = startLabel;
+	}
+	public void setEndLabel(String endLabel) {
+		this.endLoopLabel = endLabel;
+	}
+	
+	public String getStartLabel() {
+		return this.startLoopLabel;
+	}
+	public String getEndLabel() {
+		return this.endLoopLabel;
+	}
 	
 	////////////////////////////////////////////////////////////
 	// convenience factory
