@@ -4,12 +4,12 @@ import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
 import tokens.Token;
 
-public class ParameterTupleNode extends ParseNode {
+public class ParameterListNode extends ParseNode {
 
-	public ParameterTupleNode(Token token) {
+	public ParameterListNode(Token token) {
 		super(token);
 	}
-	public ParameterTupleNode(ParseNode node) {
+	public ParameterListNode(ParseNode node) {
 		super(node);
 	}
 	

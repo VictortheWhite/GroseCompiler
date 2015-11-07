@@ -44,56 +44,12 @@ class SemanticGloblaDefinitionVisitor extends ParseNodeVisitor.Default {
 	
 	////////////////////////////////////////////////////////////////////////////
 	// deal with global definitions
-	
-	// tuple definition
-	@Override
-	public void visitLeave(TupleDefinitionNode node) {
-		IdentifierNode identifier = (IdentifierNode) node.child(0);
-		ParameterTupleNode paraTup = (ParameterTupleNode) node.child(1);
+
 		
-		Type TupleType = paraTup.getType();
-		identifier.setType(TupleType);
-		addBinding(identifier, TupleType);
-		
-		// make it immutable and unable to be shadowed for now
-		identifier.getBinding().setImmutablity(true);
-		identifier.getBinding().setShadow(false);
-		
-	}
-	
-	// parameter tuple
-	@Override
-	public void visitLeave(ParameterTupleNode node) {
-		if(node.child(0) instanceof IdentifierNode) {
-			
-		} else {
-			
-		}
-	}
-	
-	
 	
 	///////////////////////////////////////////////////////////////////////////
 	// IdentifierNodes, with helper methods
-	/*
-	@Override
-	public void visit(IdentifierNode node) {
-		
-		if(!isBeingDeclared(node)) {		
-			Binding binding = node.findVariableBinding();
-			node.setType(binding.getType());
-			node.setBinding(binding);
-		}
-		
-		// else parent DeclarationNode does the processing.
-	}
-	
-	private boolean isBeingDeclared(IdentifierNode node) {
-		ParseNode parent = node.getParent();
-		return (parent instanceof TupleDefinitionNode) ;
-	}
-	*/
-	
+
 	private void addBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
 			identifierNode.setBinding(Binding.nullInstance());

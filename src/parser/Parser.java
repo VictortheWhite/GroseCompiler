@@ -106,25 +106,22 @@ public class Parser {
 	//					| identifier
 	
 	private ParseNode parseParameterTuple() {
-		ParameterTupleNode result = new ParameterTupleNode(nowReading);
 		if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
+			ParameterListNode result = new ParameterListNode(nowReading);
 			readToken();
 			result = parseParameterList(result);
 			expect(Punctuator.CLOSE_PARENTHESIS);
+			
+			return result;
 		} else {
-			ParseNode identifier = parseIdentifier();
-			result.appendChild(identifier);
+			return parseIdentifier();
 		}
-		
-		return result;
-		
-		
 	}
 	
 	// parameterList -> [ parameterSpecification [, parameterSpecification]* ]  
 	// zero or more comma-seperated parameterSpecifications
 	
-	private ParameterTupleNode parseParameterList(ParameterTupleNode parent) {
+	private ParameterListNode parseParameterList(ParameterListNode parent) {
 		if(startsParameterSpecification(nowReading)) {
 			ParseNode paraSpecNode = parseParameterSpecification();
 			parent.appendChild(paraSpecNode);

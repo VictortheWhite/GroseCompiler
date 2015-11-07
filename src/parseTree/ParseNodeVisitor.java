@@ -61,8 +61,8 @@ public interface ParseNodeVisitor {
 	void visitEnter(TupleDefinitionNode node);
 	void visitLeave(TupleDefinitionNode node);
 	
-	void visitEnter(ParameterTupleNode node);
-	void visitLeave(ParameterTupleNode node);
+	void visitEnter(ParameterListNode node);
+	void visitLeave(ParameterListNode node);
 	
 	void visitEnter(ParameterSpecificationNode node);
 	void visitLeave(ParameterSpecificationNode node);
@@ -204,10 +204,10 @@ public interface ParseNodeVisitor {
 		public void visitLeave(TupleDefinitionNode node) {
 			defaultVisitLeave(node);
 		}
-		public void visitEnter(ParameterTupleNode node) {
+		public void visitEnter(ParameterListNode node) {
 			defaultVisitEnter(node);
 		}
-		public void visitLeave(ParameterTupleNode node) {
+		public void visitLeave(ParameterListNode node) {
 			defaultVisitLeave(node);
 		}
 		public void visitEnter(ParameterSpecificationNode node) {

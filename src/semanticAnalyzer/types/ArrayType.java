@@ -28,7 +28,6 @@ public class ArrayType implements Type{
 	public Type getSubType() {
 		return subType;
 	}
-	
 	public int getSize() {
 		return 4;		
 	}
