@@ -7,6 +7,9 @@ import tokens.Token;
 
 public class ForControlPhraseNode extends ParseNode {
 
+	private boolean isLowerBoundIncludedInLoop;		// lowerbound expr in Count
+	private boolean isUpperBoundIncludedInLoop;		// upperbound
+	
 	public ForControlPhraseNode(Token token) {
 		super(token);
 		assert(token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT));
@@ -15,6 +18,21 @@ public class ForControlPhraseNode extends ParseNode {
 	public ForControlPhraseNode(ParseNode node) {
 		super(node);
 	}
+	
+	//////////////////////////////////////////////////////////
+	public void setLowerBoundIncluded(boolean b) {
+		this.isLowerBoundIncludedInLoop = b;
+	}
+	public void setUpperBoundIncluded(boolean b) {
+		this.isUpperBoundIncludedInLoop = b;
+	}
+	public boolean isLowerBoundIncluded() {
+		return this.isLowerBoundIncludedInLoop;
+	}
+	public boolean isUpperBoundIncluded() {
+		return this.isUpperBoundIncludedInLoop;
+	}
+	
 	
 	///////////////////////////////////////////////////////////
 	// boilerplate for visitors

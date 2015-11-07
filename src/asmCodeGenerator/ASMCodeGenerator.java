@@ -493,7 +493,7 @@ public class ASMCodeGenerator {
 			String endLoopLabel = node.getEndLabel();
 			String continueLoopLabel = node.getContinueLabel();
 			
-			ParseNode forCtlNode = node.child(0);
+			ForControlPhraseNode forCtlNode = (ForControlPhraseNode)node.child(0);
 			ASMCodeFragment block = removeVoidCode(node.child(1));
 			
 			newVoidCode(node);
@@ -613,6 +613,56 @@ public class ASMCodeGenerator {
 				code.add(StoreI);			// [...n]	i++
 				code.add(Jump, startLoopLabel);
 				code.add(Label, endLoopLabel);
+				code.add(Pop);
+			} else if(forCtlNode.getToken().isLextant(Keyword.COUNT)) {								
+				ASMCodeFragment itrAdr = removeAddressCode(forCtlNode.child(0));
+				ASMCodeFragment lowerBound = null;
+				ASMCodeFragment upperBound = null;
+				
+				ASMOpcode JumpOpcode = null;
+				if(forCtlNode.isUpperBoundIncluded())
+					JumpOpcode = JumpNeg;
+				else
+					JumpOpcode = JumpFalse;
+				
+				if(forCtlNode.nChildren() == 2)
+					upperBound = removeValueCode(forCtlNode.child(1));
+				else if(forCtlNode.nChildren() == 3) {
+					upperBound = removeValueCode(forCtlNode.child(2));
+					lowerBound = removeValueCode(forCtlNode.child(1));
+				}
+				
+				
+				code.append(itrAdr);
+				code.add(Duplicate);
+				if(forCtlNode.nChildren() == 2) {
+					code.add(PushI, 0);
+				} else if(forCtlNode.nChildren() == 3) {
+					code.append(lowerBound);
+					if(!forCtlNode.isLowerBoundIncluded()) {
+						code.add(PushI, 1);
+						code.add(Add);
+					} 
+				}
+				code.add(StoreI);			// [...itrAdr]
+				
+				code.add(Label, startLoopLabel);
+				code.add(Duplicate);		// [...itrAdr]
+				code.add(LoadI);			// [...itrAdr itr]
+				code.append(upperBound);
+				code.add(Exchange);			// [...itrAdr upperBound itr]
+				code.add(Subtract);
+				code.add(JumpOpcode, endLoopLabel);	// [...itrAdr]
+				code.append(block);
+				code.add(Label, continueLoopLabel);
+				code.add(Duplicate);
+				code.add(Duplicate);		// [...itrAdr itrAdr itrAdr]
+				code.add(LoadI);
+				code.add(PushI, 1);
+				code.add(Add);
+				code.add(StoreI);			// [...itrAdr]
+				code.add(Jump, startLoopLabel);
+				code.add(Label, endLoopLabel);	// [..itrAdr]
 				code.add(Pop);
 			}
 			

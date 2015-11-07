@@ -442,6 +442,49 @@ public class Parser {
 		}
 		if(nowReading.isLextant(Keyword.COUNT)){
 			readToken();
+			ParseNode expr1 = parseExpression2();
+			Token lessOp1 = nowReading;
+			if(!lessOp1.isLextant(Punctuator.LESS, Punctuator.LESSOFEQUAL)) {
+				return syntaxErrorNode("count needs lessOp");
+			}
+			
+
+			
+			readToken();
+			ParseNode expr2 = parseExpression2();
+			if(nowReading.isLextant(Punctuator.LESS, Punctuator.LESSOFEQUAL)) {
+				if(!(expr2 instanceof IdentifierNode)) {
+					return syntaxErrorNode("ForControl count expected identifier");
+				}
+				Token lessOp2 = nowReading;
+				
+				if(lessOp1.isLextant(Punctuator.LESS))
+					result.setLowerBoundIncluded(false);
+				if (lessOp1.isLextant(Punctuator.LESSOFEQUAL))
+					result.setLowerBoundIncluded(true);
+				if (lessOp2.isLextant(Punctuator.LESS))
+					result.setUpperBoundIncluded(false);
+				if(lessOp2.isLextant(Punctuator.LESSOFEQUAL))
+					result.setUpperBoundIncluded(true);
+				
+				
+				readToken();
+				ParseNode expr3 = parseExpression2();
+				result.appendChild(expr2);	// first child is the itr
+				result.appendChild(expr1);
+				result.appendChild(expr3);
+			} else {
+				if(!(expr1 instanceof IdentifierNode)) {
+					return syntaxErrorNode("ForControl count expected identifier");
+				}
+				if(lessOp1.isLextant(Punctuator.LESS)) 
+					result.setUpperBoundIncluded(false);
+				if(lessOp1.isLextant(Punctuator.LESSOFEQUAL))
+					result.setUpperBoundIncluded(true);
+				result.appendChild(expr1);	// first child itr
+				result.appendChild(expr2);
+			}
+			
 		}
 		if(nowReading.isLextant(Keyword.EVER))
 			readToken();

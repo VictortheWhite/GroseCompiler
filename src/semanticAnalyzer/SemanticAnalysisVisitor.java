@@ -159,25 +159,10 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 
 		leaveScope(node);
 	}
-	@Override
-	public void visitEnter(ForControlPhraseNode node) {
-		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT)) {
-			IdentifierNode itrIdentifierNode = (IdentifierNode)node.child(0);
-			itrIdentifierNode.setType(PrimitiveType.INTEGER);
-			// add identifier to binding
-			addBinding(itrIdentifierNode, PrimitiveType.INTEGER);
-			
-			// set itr to be immutable
-			itrIdentifierNode.getBinding().setImmutablity(true);
-			// itr cannot be shadowed
-			itrIdentifierNode.getBinding().setShadow(false);
-		}
-		if(node.getToken().isLextant(Keyword.COUNT)) {
-			// do something
-		}
-	}
+
 	@Override
 	public void visitLeave(ForControlPhraseNode node) {
+		// type check array
 		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT)) {
 			ParseNode arrayExprNode = node.child(1);
 			
@@ -185,9 +170,39 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 				logError("Expected array type in for(index id of array)");
 				node.setType(PrimitiveType.ERROR);
 			} 
-			else {
-				node.setType(arrayExprNode.getType());
-			}			
+		
+		}
+		
+		// check exprs in count has type of Int
+		if(node.getToken().isLextant(Keyword.COUNT)) {
+			for(int i = 1; i< node.nChildren(); i++)
+				if(node.child(i).getType()!=PrimitiveType.INTEGER) {
+					logError("Expected integer type for count lower and upper bound");
+					node.setType(PrimitiveType.ERROR);
+				}
+		}
+		
+		// create binding for itr
+		if(node.getToken().isLextant(Keyword.EVER)) {
+			return;
+		} else {
+			assert node.nChildren() ==2 || node.nChildren() == 3;
+			
+			Type itrType = null;
+			if(node.getToken().isLextant(Keyword.ELEMENT)) {
+				itrType = ((ArrayType)node.child(1).getType()).getSubType();
+			} else
+				itrType = PrimitiveType.INTEGER;
+			
+			IdentifierNode itrIdentifierNode = (IdentifierNode)node.child(0);
+			itrIdentifierNode.setType(itrType);
+			// add identifier to binding
+			addBinding(itrIdentifierNode, itrType);
+			
+			// set itr to be immutable
+			itrIdentifierNode.getBinding().setImmutablity(true);
+			// itr cannot be shadowed
+			itrIdentifierNode.getBinding().setShadow(false);
 		}
 	}
 	
@@ -362,7 +377,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	private boolean isBeingDeclared(IdentifierNode node) {
 		ParseNode parent = node.getParent();
 		return (parent instanceof DeclarationNode) && (node == parent.child(0)) 
-				||(parent instanceof ForStatementNode) &&(node == parent.child(0));
+				||(parent instanceof ForStatementNode) && (node == parent.child(0))
+				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0));
 	}
 	private void addBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
