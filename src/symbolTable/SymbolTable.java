@@ -1,7 +1,8 @@
 package symbolTable;
 
 import java.util.Collection;
-import java.util.HashMap;
+//import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,8 @@ public class SymbolTable {
 	private Map<String, Binding> table;
 	
 	public SymbolTable() {
-		table = new HashMap<String, Binding>();
+		//talbe = new HashMap<StringBinding>
+		table = new LinkedHashMap<String, Binding>();
 	}
 	
 	

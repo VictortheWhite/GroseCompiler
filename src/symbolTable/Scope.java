@@ -35,7 +35,7 @@ public class Scope {
 		this.symbolTable = new SymbolTable();
 		
 		this.allocator = allocator;
-		allocator.saveState();
+		//allocator.saveState();			// seperate saveState() from enterScope; Scope can be created without entered.
 	}
 	
 ///////////////////////////////////////////////////////////////////////
@@ -49,6 +49,9 @@ public class Scope {
 	public SymbolTable getSymbolTable() {
 		return symbolTable;
 	}	
+	public void enterScope() {
+		this.allocator.saveState();
+	}
 	
 ///////////////////////////////////////////////////////////////////////
 //memory allocation

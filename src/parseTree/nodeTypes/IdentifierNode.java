@@ -77,6 +77,9 @@ public class IdentifierNode extends ParseNode {
 		findVariableBinding();
 		return declarationScope;
 	}
+	
+	/////////////////////////////////////////////////////////////////////////
+	// error logging
 	public void useBeforeDefineError() {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer.identifierNode");
 		Token token = getToken();

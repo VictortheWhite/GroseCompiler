@@ -1,6 +1,7 @@
 package asmCodeGenerator;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
@@ -34,11 +35,13 @@ import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
+import parseTree.nodeTypes.TupleDefinitionNode;
 import parseTree.nodeTypes.UnaryOperatorNode;
 import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
+import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.Scope;
@@ -197,6 +200,8 @@ public class ASMCodeGenerator {
 		public void visitLeave(ProgramNode node) {
 			newVoidCode(node);
 			for(ParseNode child : node.getChildren()) {
+				if(child instanceof TupleDefinitionNode)
+					continue;
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
 			}
@@ -423,6 +428,14 @@ public class ASMCodeGenerator {
 			}
 			if(type instanceof ArrayType) {
 				return StoreI;
+			}
+			if(type instanceof TupleType) {
+				TupleType tupleType = (TupleType)type;
+				if(tupleType.isTrivial()) {
+					return opcodeForStore(tupleType.getTirvialEquvalenceType());
+				} else {
+					return StoreI;
+				}
 			}
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
 			return null;
@@ -1101,17 +1114,27 @@ public class ASMCodeGenerator {
 		
 		// expression -----------Empty Array Creation
 		public void visitLeave(FreshArrayNode node) {
+			if(node.getType() instanceof ArrayType) {
+				addFreshArray(node);
+			}
+			if(node.getType() instanceof TupleType) {
+				addFreshTuple(node);
+			}
+													// [...adr]
+		}
+	
+		private void addFreshArray(FreshArrayNode node) {
 			// logic is comparatively complicated, so putting everything including header here
 			ArrayType nodeType = (ArrayType)node.getType();
 			int subTypeSize = nodeType.getSubTypeSize();
 			String startLoopLabel = labeller.newLabel("empty-array-initialization-loop-start", "");
 			String endLoopLabel = labeller.newLabelSameNumber("empty-array-initialization-loop-end", "");
 			String lengthVariableLabel = labeller.newLabelSameNumber("temporary-variable-for-length-in-fresh", "");
-						
+								
 			ASMCodeFragment lengthCode = removeValueCode(node.child(1));
-			
+						
 			newValueCode(node);
-			
+						
 			code.add(DLabel, lengthVariableLabel);
 			code.add(DataI, 0);
 
@@ -1120,19 +1143,19 @@ public class ASMCodeGenerator {
 			code.add(PushD, lengthVariableLabel);
 			code.add(Exchange);
 			code.add(StoreI);	
-			
+						
 			// add RuntimeError
 			code.add(Duplicate);
 			code.add(JumpNeg, RunTime.ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR);
-			
-			
+						
+						
 			code.add(PushI, subTypeSize);
 			code.add(Multiply);
 			code.add(PushI, 17);
 			code.add(Add);											// [...size]
 			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);		// [...adr]
 			// add header
-			header.addHeader(code, node, lengthVariableLabel);		// [...adr]
+			header.addHeader(code, node, lengthVariableLabel, nodeType);// [...adr]
 			
 			code.add(Duplicate);
 			code.add(PushI, 17);
@@ -1143,7 +1166,7 @@ public class ASMCodeGenerator {
 			code.add(Multiply);										// [...adr adr* n]
 			code.add(Label, startLoopLabel);
 			code.add(Duplicate);
-			
+						
 			code.add(JumpFalse, endLoopLabel);						// [...adr adr* n]
 			code.add(Exchange);										// [...adr n adr*]
 			code.add(Duplicate);
@@ -1155,12 +1178,41 @@ public class ASMCodeGenerator {
 			code.add(PushI, -1);
 			code.add(Add);											// n--
 			code.add(Jump, startLoopLabel);
-			
+						
 			code.add(Label, endLoopLabel);
 			code.add(Pop);
-			code.add(Pop);											// [...adr]
+			code.add(Pop);				
 		}
-	
+		
+		private void addFreshTuple(FreshArrayNode node) {
+			TupleType nodeType= (TupleType)node.getType();
+			ParseNode expressionList = node.child(1);
+			
+			newValueCode(node);
+			
+			code.add(PushI, nodeType.getBytesNeeded());
+			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
+			header.addHeader(code, node, nodeType);
+			// [...adr]
+			
+			for(ParseNode child : expressionList.getChildren()) {
+				Type type = child.getType();
+				ASMOpcode storeOpcode = opcodeForStore(type);
+				ASMCodeFragment childValue = removeValueCode(child);
+				
+				code.add(Duplicate);	// [...adr adr*]
+				code.add(Duplicate);	// [...adr adr* adr*]
+				code.append(childValue);// [...adr adr* adr* val]
+				code.add(storeOpcode);	// [...adr adr*]
+				code.add(PushI, type.getSize());
+				code.add(Add);			// adr* += typeSize
+										// [...adr adr*]
+			}
+			code.add(Pop);				// [...adr]
+			
+			
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
 		public void visit(BooleanConstantNode node) {

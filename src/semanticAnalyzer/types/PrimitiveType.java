@@ -7,6 +7,7 @@ public enum PrimitiveType implements Type {
 	FLOATING(8),
 	CHARACTER(1),
 	STRING(4),
+	VOID(0),
 	ERROR(0),			// use as a value when a syntax error has occurred
 	NO_TYPE(0, "");		// use as a value when no type has been assigned.
 	
@@ -21,6 +22,13 @@ public enum PrimitiveType implements Type {
 		this.sizeInBytes = size;
 		this.infoString = infoString;
 	}
+	
+	////////////////////////////////////////////
+	// type comparasion
+	public boolean equals(TupleType otherType) {
+		return otherType.equals(this);
+	}
+	////////////////////////////////////////////
 	public int getSize() {
 		return sizeInBytes;
 	}

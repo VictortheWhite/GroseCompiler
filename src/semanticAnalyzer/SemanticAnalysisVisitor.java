@@ -1,11 +1,11 @@
 package semanticAnalyzer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
-import lexicalAnalyzer.Punctuator;
 import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
@@ -14,10 +14,10 @@ import semanticAnalyzer.signatures.FunctionSignature;
 import semanticAnalyzer.signatures.FunctionSignatures;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
+import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.Scope;
-import tokens.IdentifierToken;
 import tokens.LextantToken;
 import tokens.Token;
 
@@ -31,21 +31,21 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	// constructs larger than statements
 	@Override
 	public void visitEnter(ProgramNode node) {
-		enterProgramScope(node);
+		enterScope(node);
 	}
 	@Override
 	public void visitLeave(ProgramNode node) {
 		leaveScope(node);
 	}
 	public void visitEnter(MainBlockNode node) {
-		enterSubscope(node);
+		enterScope(node);
 	}
 	public void visitLeave(MainBlockNode node) {
 		leaveScope(node);
 	}
 	@Override
 	public void visitEnter(BlockNode node) {
-		enterSubscope(node);
+		enterScope(node);
 	}
 	@Override
 	public void visitLeave(BlockNode node) {
@@ -54,19 +54,26 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	
 	
 	///////////////////////////////////////////////////////////////////////////
-	// helper methods for scoping.
-	private void enterProgramScope(ParseNode node) {
-		Scope scope = Scope.createProgramScope();
-		node.setScope(scope);
-	}	
-	private void enterSubscope(ParseNode node) {
-		Scope baseScope = node.getLocalScope();
-		Scope scope = baseScope.createSubscope();
-		node.setScope(scope);
-	}		
+	// helper methods for scoping.	
+	private void enterScope(ParseNode node) {
+		Scope scope = node.getScope();
+		scope.enterScope();
+	}
 	private void leaveScope(ParseNode node) {
 		node.getScope().leave();
 	}
+	
+	///////////////////////////////////////////////////////////////////////////
+	// global definition
+	@Override
+	public void visitEnter(TupleDefinitionNode node) {
+		enterScope(node);
+	}
+	public void visitLeave(TupleDefinitionNode node) {
+		leaveScope(node);
+	}
+	
+	
 	
 	///////////////////////////////////////////////////////////////////////////
 	// statements, declarations and reassignments
@@ -152,7 +159,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	
 	@Override 
 	public void visitEnter(ForStatementNode node) {
-		enterSubscope(node);		
+		enterScope(node);		
 	}
 	@Override
 	public void visitLeave(ForStatementNode node) {
@@ -270,8 +277,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	
 	// populated array creation
+	@Override
 	public void visitLeave(PopulatedArrayNode node) {
-		assert node.nChildren() >=1;
+		if(node.nChildren() == 0) {
+			logError("Cannnot create empty populated array: " + node.getToken().getLocation());
+			node.setType(PrimitiveType.ERROR);
+			return;
+		}
 		Type childType = node.child(0).getType();
 		for(ParseNode child : node.getChildren()) {
 			if(!child.getType().equals(childType)) 
@@ -282,21 +294,42 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	
 	// empty array creation
+	@Override
 	public void visitLeave(FreshArrayNode node) {
 		assert node.nChildren() == 2;
-		Type nodeType = new ArrayType(node.child(0).getType());
+		Type nodeType = node.child(0).getType();
+		if(!(nodeType instanceof ArrayType || nodeType instanceof TupleType)) {
+			logError("Ilegal Type for fresh, arrayType or tupleType expected" + node.getToken().getLocation());
+			node.setType(PrimitiveType.ERROR);
+		}
+		
+		if(nodeType instanceof ArrayType) {
+			if(node.child(1).getType()!= PrimitiveType.INTEGER) {
+				logError("Ilegal Type for fresh, int expected for array Length" + node.getToken().getLocation());
+			}
+		}
+		if(nodeType instanceof TupleType) {
+			List<Type> childTypes = collectChildrenTypes(node.child(1));
+			if(!((TupleType) nodeType).checkArugments(childTypes)) {
+				argumentsListNotMatchedError(node,nodeType);
+				node.setType(PrimitiveType.ERROR);
+			}
+		}
+		
 		node.setType(nodeType);
 	}
 	
-	public void visitLeave(TypeNode node) {
-		assert node.nChildren() == 1;
-		assert node.getToken().isLextant(Punctuator.OPEN_SQUARE_BRACKET);
+	private List<Type> collectChildrenTypes(ParseNode node) {
+		List<Type> childrenTypes = new ArrayList<Type>();
+		for(ParseNode child : node.getChildren()) {
+			childrenTypes.add(child.getType());
+		}
 		
-		node.setType(new ArrayType(node.child(0).getType()));
+		return childrenTypes;
 	}
-	
-	
+		
 	// array indexing
+	@Override
 	public void visitLeave(ArrayIndexingNode node) {
 		assert node.nChildren() == 2;
 		ParseNode left  = node.child(0);
@@ -318,7 +351,18 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		// FunctionSignatures.resetTypeVar();		
 	}
 	
-
+	// expression -- null reference
+	@Override
+	public void visitLeave(NullReferenceNode node) {
+		assert node.nChildren() == 1;
+		Type nodeType = node.child(0).getType();
+		if(nodeType instanceof PrimitiveType) {
+			invalidNullReferenceTypeError(node);
+			node.setType(PrimitiveType.ERROR);
+			return;
+		}	
+		node.setType(nodeType);
+	}
 
 
 	///////////////////////////////////////////////////////////////////////////
@@ -348,20 +392,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		node.setType(PrimitiveType.STRING);
 	}
 	@Override
-	public void visit(TypeNode node) {
-		if(node.getToken() instanceof IdentifierToken ) {
-			return;
-		}
-		
-		node.setType(node.getPrimitiveType());
-	}
-	@Override
 	public void visit(NewlineNode node) {
-//		node.setType(PrimitiveType.NO_TYPE);
+		node.setType(PrimitiveType.NO_TYPE);
 	}
 	@Override
 	public void visit(SeparatorNode node) {
-//		node.setType(PrimitiveType.NO_TYPE);
+		node.setType(PrimitiveType.NO_TYPE);
 	}
 	///////////////////////////////////////////////////////////////////////////
 	// IdentifierNodes, with helper methods
@@ -378,7 +414,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode parent = node.getParent();
 		return (parent instanceof DeclarationNode) && (node == parent.child(0)) 
 				||(parent instanceof ForStatementNode) && (node == parent.child(0))
-				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0));
+				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0))
+				||(parent instanceof ParameterSpecificationNode);
 	}
 	private void addBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
@@ -412,6 +449,16 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		String errorMessage = "targetable expr must be identifier or array indexing: ";
 		
 		logError(errorMessage + token.getLocation() + child);
+	}
+	private void argumentsListNotMatchedError(ParseNode node, Type type) {
+		Token token = node.getToken();
+		String errorMessage = "ArrgumentList does not mathch: ";
+		
+		logError(errorMessage + type.infoString() + token.getLocation());
+	}
+	private void invalidNullReferenceTypeError(ParseNode node) {
+		Token token = node.getToken();
+		String errorMessage = "Reference Type needed for null reference: " + token.getLocation();
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

@@ -19,6 +19,7 @@ public enum Keyword implements Lextant {
 	BOOL("bool"),
 	ARRAY("array"),
 	TUPLE("tuple"),
+	NULL("null"),
 	TRUE("true"),
 	FALSE("false"),
 	IF("if"),

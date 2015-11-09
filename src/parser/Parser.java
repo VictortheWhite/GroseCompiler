@@ -114,7 +114,7 @@ public class Parser {
 			
 			return result;
 		} else {
-			return parseIdentifier();
+			return parseType();
 		}
 	}
 	
@@ -695,10 +695,18 @@ public class Parser {
 	}
 	// Unary operator
 	// exprUnaryOp -> [!|copy]* expr4 right-assoc
+	//				  null type
 	private ParseNode parseExpressionUnaryOp() {
 		if(!startsExpressionUnaryOp(nowReading)) {
 			return syntaxErrorNode("expression UnaryOp");
 		}
+		if(nowReading.isLextant(Keyword.NULL)) {
+			Token nullToken = nowReading;
+			readToken();
+			ParseNode typeNode = parseType();
+			return NullReferenceNode.withChildren(nullToken, typeNode);
+		}
+		
 		ParseNode UnaryRoot = null;
 		ParseNode currentNode = null;
 		if(!isUnaryOperator(nowReading)) {
@@ -720,7 +728,7 @@ public class Parser {
 		
 	}
 	private boolean startsExpressionUnaryOp(Token token) {
-		return isUnaryOperator(token) || startsExpressionArrayIndexing(token);
+		return isUnaryOperator(token) || startsExpressionArrayIndexing(token) || token.isLextant(Keyword.NULL);
 	}
 	private boolean isUnaryOperator(Token token) {
 		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY);
@@ -810,6 +818,10 @@ public class Parser {
 	}
 	private ParseNode parseExpressionList(ParseNode node) {
 		
+		if(!startsExpression(nowReading)) {
+			return node;
+		}
+		
 		ParseNode newExpr = parseExpression();
 		node.appendChild(newExpr);
 		while(nowReading.isLextant(Punctuator.SEPARATOR)) {
@@ -832,12 +844,15 @@ public class Parser {
 		}
 		Token freshToken = nowReading;
 		readToken();
-		expect(Punctuator.OPEN_SQUARE_BRACKET);
-		ParseNode type = parseType();
-		expect(Punctuator.CLOSE_SQUARE_BRACKET);
 		
+		Token typeToken = nowReading;
+		ParseNode type = parseType();
+		ParseNode expr = null;
 		expect(Punctuator.OPEN_PARENTHESIS);
-		ParseNode expr = parseExpression();
+		if(typeToken instanceof IdentifierToken)
+			expr = parseExpressionList(new ExpressionListNode(previouslyRead));
+		else
+			expr = parseExpression();
 		expect(Punctuator.CLOSE_PARENTHESIS);
 		return FreshArrayNode.withChildren(freshToken, type, expr);
 	}
