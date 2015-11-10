@@ -1,6 +1,8 @@
 package semanticAnalyzer;
 
 import parseTree.*;
+import semanticAnalyzer.types.TupleType;
+import symbolTable.Binding;
 import symbolTable.Scope;
 
 
@@ -21,6 +23,17 @@ public class SemanticAnalyzer {
 		ASTree.accept(new SemanticAnalysisTupleCollectingVisitor());
 		ASTree.accept(new TupleInitializationAndFunctionSignatureVisitor());
 		ASTree.accept(new SemanticAnalysisVisitor());
+		
+		/*
+		System.out.println(globalScope.getSymbolTable());
+		for(String tupleName : globalScope.getSymbolTable().keySet()) {
+			Binding binding = globalScope.getSymbolTable().lookup(tupleName);
+			if(!(binding.getType() instanceof TupleType)) {
+				continue;
+			}
+			TupleType type = (TupleType)binding.getType();
+			type.printSymbolTable();
+		}*/
 		
 		return ASTree;
 	}

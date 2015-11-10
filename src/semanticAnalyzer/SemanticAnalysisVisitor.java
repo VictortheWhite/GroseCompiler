@@ -6,6 +6,7 @@ import java.util.List;
 
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
+import lexicalAnalyzer.Punctuator;
 import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
@@ -357,11 +358,27 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		assert node.nChildren() == 1;
 		Type nodeType = node.child(0).getType();
 		if(nodeType instanceof PrimitiveType) {
-			invalidNullReferenceTypeError(node);
-			node.setType(PrimitiveType.ERROR);
-			return;
+			if(nodeType != PrimitiveType.STRING) {
+				invalidNullReferenceTypeError(node);
+				node.setType(PrimitiveType.ERROR);
+				return;
+			}
 		}	
 		node.setType(nodeType);
+	}
+	
+	///////////////////////////////////////////////////////////////////
+	// type node
+	public void visitLeave(TypeNode node) {
+		assert node.nChildren() == 1;
+		assert node.getToken().isLextant(Punctuator.OPEN_SQUARE_BRACKET);
+		
+		node.setType(new ArrayType(node.child(0).getType()));
+	}
+	
+	@Override
+	public void visit(TypeNode node) {
+		node.setType(node.getTerminalType());
 	}
 
 
@@ -459,6 +476,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	private void invalidNullReferenceTypeError(ParseNode node) {
 		Token token = node.getToken();
 		String errorMessage = "Reference Type needed for null reference: " + token.getLocation();
+		logError(errorMessage);
 	}
 	private void logError(String message) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.semanticAnalyzer");

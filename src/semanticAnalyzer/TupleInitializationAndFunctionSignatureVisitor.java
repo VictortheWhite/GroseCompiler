@@ -18,6 +18,7 @@ import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.Scope;
+import symbolTable.SymbolTable;
 import tokens.IdentifierToken;
 import tokens.LextantToken;
 import tokens.Token;
@@ -26,6 +27,13 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 
 	// this visitor inilized tupleType
 	// and add function signatures for functions
+	// compressPath and replace trivial tuple with primitiveType
+	
+	@Override
+	public void visitLeave(ProgramNode node) {
+		compressPathAndEliminateTirivalTupleInGlobalSymbolTable();
+		eliminateTrivialTupleTypeInTupleSymbolTable();
+	}
 	
 	@Override
 	public void visitLeave(TupleDefinitionNode node) {
@@ -86,6 +94,35 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 		
 		Binding binding = scope.createBinding(identifierNode, type);
 		identifierNode.setBinding(binding);
+	}
+	
+	///////////////////////////////////////////////////////////////////////
+	// compress path
+	// eliminate TrivialTuple in Global SymbolTable
+	private void compressPathAndEliminateTirivalTupleInGlobalSymbolTable() {
+		SymbolTable globalTable = SemanticAnalyzer.getGlobalScope().getSymbolTable();
+		for(String tupleName : globalTable.keySet()) {
+			Binding binding = globalTable.lookup(tupleName);
+			assert binding.getType() instanceof TupleType;
+			TupleType type = (TupleType)binding.getType();
+			type.compressPath();
+			if(type.isTrivial()) {
+				binding.setType(type.getTirvialEquvalenceType());
+			}
+		}
+	}
+	
+	// eliminate TrivialTuple in each TupleType's SymbolTable
+	private void eliminateTrivialTupleTypeInTupleSymbolTable() {
+		SymbolTable globalTable = SemanticAnalyzer.getGlobalScope().getSymbolTable();
+		for(String tupleName : globalTable.keySet()) {
+			Binding binding = globalTable.lookup(tupleName);
+			if(!(binding.getType() instanceof TupleType)) {
+				continue;
+			}
+			TupleType type = (TupleType)binding.getType();
+			type.eliminateTrivialTupleTypeInSymbolTable();
+		}
 	}
 	
 	///////////////////////////////////////////////////////////////////////

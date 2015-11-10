@@ -40,10 +40,10 @@ public class TupleType implements Type{
 		}
 	}
 	
+	// check Arguments
 	public boolean checkArugments(List<Type> arguments) {
-		if(!compressPath()) {
-			return false;
-		}
+		
+		assert this.symbolTable != null;
 		
 		List<Binding> TupleArgsBindings= new ArrayList<Binding>(this.symbolTable.values());
 		if(arguments.size() != TupleArgsBindings.size()) {
@@ -59,7 +59,42 @@ public class TupleType implements Type{
 		
 		return true;
 	}
+
+	// path compression
+	public void compressPath() {		
+		TupleType current = this;
+		List<TupleType> Path= new Vector<TupleType>();
+		
+		while(current.refferedType != null) {		
+			if(Path.contains(current)) {
+				CircledTupleDefinitionError();
+				return;
+			}
+			Path.add(current);
+			current = current.refferedType;
+		}
+		this.symbolTable = current.symbolTable;
+		assert symbolTable != null;
+	}
 	
+	// eliminate TrivialTupleType in symbolTable
+	public void eliminateTrivialTupleTypeInSymbolTable() {
+		for(String tupleName : this.symbolTable.keySet()) {
+			Binding binding = this.symbolTable.lookup(tupleName);
+			if(!(binding.getType() instanceof TupleType)) {
+				continue;
+			}
+			TupleType type = (TupleType)binding.getType();
+			if(type.isTrivial()) {
+				binding.setType(type.getTirvialEquvalenceType());
+			}			
+		}
+	}
+	
+	// print symbolTable
+	public void printSymbolTable() {
+		System.out.println(this.TupleName + " " +this.symbolTable);
+	}
 	
 	/////////////////////////////////////////////////////////////
 	// attributes
@@ -94,7 +129,6 @@ public class TupleType implements Type{
 		return symbolTable.keySet().size() <= 1;
 	}
 	
-	
 	public boolean subTypeIsReference() {
 				
 		List<Type> typeList = getParameterList();
@@ -127,23 +161,7 @@ public class TupleType implements Type{
 		} 
 		return resultType;
 	}
-	//////////////////////////////////////////////////////////////
-	// path compression
-	private boolean compressPath() {		
-		TupleType current = this;
-		List<TupleType> Path= new Vector<TupleType>();
-		
-		while(current.refferedType != null) {		
-			if(Path.contains(current)) {
-				CircledTupleDefinitionError();
-				return false;
-			}
-			Path.add(current);
-			current = current.refferedType;
-		}
-		this.symbolTable = current.symbolTable;
-		return true;
-	}
+
 	
 	
 	////////////////////////////////////////////////////////////
@@ -160,14 +178,15 @@ public class TupleType implements Type{
 	}
 	
 	public String infoString() {
-		/*
-		if(SymbolTable != null)
-			return "TupleType[" + this.TupleName + "]\n"+ SymbolTable.toString();
-		if(refferedName!=null)
-			return "TupleType" + "[" + this.TupleName + "] "+ refferedName;
+		
+		if(this.symbolTable != null)
+			return "TupleType[" + this.TupleName + "]\n"+ this.symbolTable.toString();
+		if(refferedType!=null)
+			return "TupleType" + "[" + this.TupleName + "] "+ refferedType.TupleName;
+		
 		return "Not-initialized";
-		*/
-		return "Tuple[" + this.TupleName + "]";
+		
+		//return "Tuple[" + this.TupleName + "]";
 	}
 	
 }

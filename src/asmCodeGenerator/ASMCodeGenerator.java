@@ -30,6 +30,7 @@ import parseTree.nodeTypes.IdentifierNode;
 import parseTree.nodeTypes.IfStatementNode;
 import parseTree.nodeTypes.IntegerConstantNode;
 import parseTree.nodeTypes.NewlineNode;
+import parseTree.nodeTypes.NullReferenceNode;
 import parseTree.nodeTypes.PopulatedArrayNode;
 import parseTree.nodeTypes.PrintStatementNode;
 import parseTree.nodeTypes.ProgramNode;
@@ -181,6 +182,9 @@ public class ASMCodeGenerator {
 			}
 			else if(node.getType() instanceof ArrayType) {
 				code.add(LoadI);
+			} 
+			else if(node.getType() instanceof TupleType) {
+				code.add(LoadI);
 			}
 			else {
 				assert false : "node " + node;
@@ -236,7 +240,9 @@ public class ASMCodeGenerator {
 				else {
 					if(child.getType() instanceof ArrayType)
 						appendPrintArrayCode(child);
-					else 
+					else if(child.getType() instanceof TupleType)
+						appendPrintTupleCode(child);
+					else
 						appendPrintCode(child);
 				}
 			}
@@ -253,15 +259,20 @@ public class ASMCodeGenerator {
 			code.add(Printf);
 		}
 		private void appendPrintCode(ParseNode node) {
-			
-			String format = printFormat(node.getType());
 
 			code.append(removeValueCode(node));
-			convertToStringIfBoolean(node.getType());
-			addAddressOffestIfString(node.getType());
+			printPrimitiveType(node.getType());
+		}
+		
+		private void printPrimitiveType(Type type) {
+			String format = printFormat(type);
+
+			convertToStringIfBoolean(type);
+			addAddressOffestIfString(type);
 			code.add(PushD, format);
 			code.add(Printf);
 		}
+		
 		// print array
 		private void appendPrintArrayCode(ParseNode node) {
 			ArrayType nodeType = (ArrayType)node.getType();
@@ -303,12 +314,11 @@ public class ASMCodeGenerator {
 			 */
 			if(type.getSubType() instanceof ArrayType) {
 				printArray((ArrayType)type.getSubType());
+			} else if(type.getSubType() instanceof TupleType) {
+				printTuple((TupleType)type.getSubType());
 			}
 			else {
-				convertToStringIfBoolean(type.getSubType());	
-				addAddressOffestIfString(type.getSubType());
-				code.add(PushD, printFormat(type.getSubType()));
-				code.add(Printf);
+				printPrimitiveType(type.getSubType());
 			}	
 			code.add(PushI, subTypeSize);
 			code.add(Add);								// adr* += subTypeSize
@@ -331,6 +341,61 @@ public class ASMCodeGenerator {
 			code.add(PushI, 93);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
 			code.add(Printf);
+		}
+		
+		// print tuple
+		private void appendPrintTupleCode(ParseNode node) {
+			TupleType tupleType = (TupleType)node.getType();
+			code.append(removeValueCode(node));	// [...adr]
+			printTuple(tupleType);
+			
+		}
+		private void printTuple(TupleType type) {
+			List<Type> subElementTypes = type.getParameterList();
+			
+			code.add(PushI, 40);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							// print '('
+			
+			// [...adr ]
+			code.add(PushI, 9);
+			code.add(Add);
+			
+			int i = 0;
+			while(i < subElementTypes.size()) {
+				Type subType = subElementTypes.get(i);
+				ASMOpcode loadOpcode = LoadArrayOpcode(subType);
+				
+				code.add(Duplicate);	// [...adr* adr*]
+				code.add(loadOpcode);	// [...adr* ele]
+				if(subType instanceof ArrayType) {
+					printArray((ArrayType)subType);
+				} else if(subType instanceof TupleType) {
+					printTuple((TupleType)subType);
+				}
+				else {
+					printPrimitiveType(subType);
+				}
+				code.add(PushI, subType.getSize());
+				code.add(Add);
+				
+				i++;
+				if(i == subElementTypes.size())
+					break;
+				else {	
+					code.add(PushI, 44);						// print ','
+					code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+					code.add(Printf);
+					code.add(PushI, 32);						// print space
+					code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+					code.add(Printf);	
+				}
+			}
+			code.add(Pop);
+			
+			code.add(PushI, 41);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							// print ')'
 		}
 		private void convertToStringIfBoolean(Type type) {
 			if(type != PrimitiveType.BOOLEAN) {
@@ -370,6 +435,9 @@ public class ASMCodeGenerator {
 		}
 		private ASMOpcode LoadArrayOpcode(Type type) {
 			if(type instanceof ArrayType) {
+				return LoadI;
+			}
+			if(type instanceof TupleType) {
 				return LoadI;
 			}
 			
@@ -430,12 +498,8 @@ public class ASMCodeGenerator {
 				return StoreI;
 			}
 			if(type instanceof TupleType) {
-				TupleType tupleType = (TupleType)type;
-				if(tupleType.isTrivial()) {
-					return opcodeForStore(tupleType.getTirvialEquvalenceType());
-				} else {
-					return StoreI;
-				}
+				assert !((TupleType)type).isTrivial();
+				return StoreI;
 			}
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
 			return null;
@@ -1181,7 +1245,7 @@ public class ASMCodeGenerator {
 						
 			code.add(Label, endLoopLabel);
 			code.add(Pop);
-			code.add(Pop);				
+			code.add(Pop);	
 		}
 		
 		private void addFreshTuple(FreshArrayNode node) {
@@ -1190,17 +1254,21 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			
+			
 			code.add(PushI, nodeType.getBytesNeeded());
 			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
 			header.addHeader(code, node, nodeType);
-			// [...adr]
 			
+			// [...adr]		
+			code.add(Duplicate);	
+			code.add(PushI, 9);
+			code.add(Add);		// [...adr adr*]
+
 			for(ParseNode child : expressionList.getChildren()) {
 				Type type = child.getType();
 				ASMOpcode storeOpcode = opcodeForStore(type);
 				ASMCodeFragment childValue = removeValueCode(child);
 				
-				code.add(Duplicate);	// [...adr adr*]
 				code.add(Duplicate);	// [...adr adr* adr*]
 				code.append(childValue);// [...adr adr* adr* val]
 				code.add(storeOpcode);	// [...adr adr*]
@@ -1209,9 +1277,15 @@ public class ASMCodeGenerator {
 										// [...adr adr*]
 			}
 			code.add(Pop);				// [...adr]
-			
-			
 		}
+		
+		// expression -- null reference
+		@Override
+		public void visitLeave(NullReferenceNode node) {
+			newValueCode(node);
+			code.add(PushI, 0);
+		}
+		
 		
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
