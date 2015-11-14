@@ -1077,7 +1077,10 @@ public class ASMCodeGenerator {
 				visitBooleanComplimentNode(node, operator);
 			}
 			if(operator == Keyword.COPY) {
-				visitArrayCopyNode(node, operator);
+				if(node.getType() instanceof TupleType) 
+					visitTupleCopyNode(node, operator);
+				if(node.getType() instanceof ArrayType)
+					visitArrayCopyNode(node, operator);
 			}
 		}
 		private void visitBooleanComplimentNode(UnaryOperatorNode node, Lextant operator) {
@@ -1101,6 +1104,7 @@ public class ASMCodeGenerator {
 			code.add(Jump, joinLabel);
 			code.add(Label, joinLabel);
 		}
+		
 		private void visitArrayCopyNode(UnaryOperatorNode node, Lextant operator) {
 			assert operator == Keyword.COPY;
 			
@@ -1115,6 +1119,22 @@ public class ASMCodeGenerator {
 			
 			code.add(Call, RunTime.ARRAY_COPY);
 			
+		}
+		
+		private void visitTupleCopyNode(UnaryOperatorNode node, Lextant operator) {
+			assert node.getType() instanceof TupleType;
+			ASMCodeFragment arg = removeValueCode(node.child(0));
+			TupleType type = (TupleType)node.getType();
+			
+			newValueCode(node);
+			
+			code.add(PushD, RunTime.TUPLE_COPY_ARG);
+			code.append(arg);
+			code.add(StoreI);
+
+			code.add(PushI, type.getBytesNeeded());
+			// [...n]
+			code.add(Call, RunTime.TUPLE_COPY);
 		}
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {

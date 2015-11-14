@@ -1,6 +1,7 @@
  package asmCodeGenerator.runtime;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
+import asmCodeGenerator.Macros;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 public class RunTime {
 	public static final String EAT_LOCATION_ZERO      = "$eat-location-zero";		// helps us distinguish null pointers from real ones.
@@ -20,8 +21,10 @@ public class RunTime {
 	public static final String STRING_CONCA_ARG1	  = "$string-concatenation-arg1";
 	public static final String STRING_CONCA_ARG2	  = "$string-concatenation-arg2";
 	public static final String ARRAY_COPY_ARG		  = "$array-copy-arg";
+	public static final String TUPLE_COPY_ARG		  = "$tuple-copy-arg";
 	public static final String STRING_CONCATENATION   = "$$string-concatenation-start";
 	public static final String ARRAY_COPY			  = "$$array-copy-start";
+	public static final String TUPLE_COPY			  = "$$tuple-copy-start";
 	
 	public static final String GENERAL_RUNTIME_ERROR = "$$general-runtime-error";
 	public static final String INTEGER_DIVIDE_BY_ZERO_RUNTIME_ERROR = "$$i-divide-by-zero";
@@ -36,6 +39,7 @@ public class RunTime {
 		result.append(runtimeErrors());
 		result.append(stringConcatenationSubRoutine());
 		result.append(arrayCopySubRoutine());
+		result.append(tupleCopySubRoutine());
 		result.add(DLabel, USABLE_MEMORY_START);
 		return result;
 	}
@@ -281,6 +285,55 @@ public class RunTime {
 		frag.add(Return);
 		
 		
+		
+		return frag;
+	}
+	
+	private ASMCodeFragment tupleCopySubRoutine() {
+		String loop_Start = "tuple-copy-loop-start";
+		String loop_End = "tuple-copy-loop-end";
+		
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VALUE);
+		
+		// [...n R]
+		frag.add(Label, TUPLE_COPY);
+		frag.add(Exchange);
+		frag.add(Duplicate);
+		frag.add(Duplicate);
+		frag.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
+		frag.add(Exchange);					// [...R n adr n]
+		
+		frag.add(Label, loop_Start);
+		frag.add(Duplicate);				
+		frag.add(JumpFalse, loop_End);
+		frag.add(Exchange);					// [...R n n* adr*]
+		frag.add(Duplicate);				
+		frag.add(PushD, TUPLE_COPY_ARG);
+		frag.add(LoadI);					// [...R n n* adr* adr* A]
+		frag.add(LoadC);					// [...R n n* adr* adr* A[i]]
+		frag.add(StoreC);					// [...R n n* adr*]
+		frag.add(PushI, 1);
+		frag.add(Add);						// adr*++
+		frag.add(PushD, TUPLE_COPY_ARG);
+		frag.add(LoadI);
+		frag.add(PushI, 1);
+		frag.add(Add);						// [...R n n* adr* A+1]
+		frag.add(PushD, TUPLE_COPY_ARG);
+		frag.add(Exchange);					// [...R n n* adr* arg A+1]
+		frag.add(StoreI);					// [...R n n* adr*]
+		frag.add(Exchange);
+		frag.add(PushI, -1);
+		frag.add(Add);						// [...R n adr* n*]  n*--
+		frag.add(Jump, loop_Start);
+		frag.add(Label, loop_End);
+		
+		frag.add(Pop);						// [...R n adr*]
+		frag.add(Exchange);					// [...R adr* n]
+		frag.add(Subtract);					// [...R adr]
+		
+
+		frag.add(Exchange);
+		frag.add(Return);
 		
 		return frag;
 	}

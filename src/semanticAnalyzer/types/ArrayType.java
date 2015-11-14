@@ -35,10 +35,6 @@ public class ArrayType implements Type{
 		return subType.getSize();
 	}
 	public String infoString() {
-		if(subType instanceof ArrayType) {
-			return "Array of " + ((ArrayType)subType).infoString();
-		}
-		else
-			return "Array of " + subType.toString();
+		return "Array of " + subType.infoString();
 	}
 }

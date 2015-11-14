@@ -238,6 +238,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override
 	public void visitLeave(UnaryOperatorNode node) {
 		assert node.nChildren()==1;
+		
 		ParseNode SingleChild = node.child(0);
 		List<Type> childTypes = Arrays.asList(SingleChild.getType());
 		
@@ -286,9 +287,23 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			return;
 		}
 		Type childType = node.child(0).getType();
-		for(ParseNode child : node.getChildren()) {
-			if(!child.getType().equals(childType)) 
-				populatedArrayTypeCheckError(node, childType);
+		if(childType instanceof TupleType) {				// tuple type has to be the same type( not equivalent one)
+			for(ParseNode child : node.getChildren()) {
+				if(child.getType() != childType) {
+					populatedArrayTypeCheckError(node, childType);
+					node.setType(PrimitiveType.ERROR);
+					return;
+				}
+			}
+		}
+		else {												// use equals() for other types
+ 			for(ParseNode child : node.getChildren()) {
+				if(!child.getType().equals(childType)) {
+					populatedArrayTypeCheckError(node, childType);
+					node.setType(PrimitiveType.ERROR);
+					return;
+				}
+			}
 		}
 		ArrayType arrayType = new ArrayType(childType);
 		node.setType(arrayType);

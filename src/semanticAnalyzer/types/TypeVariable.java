@@ -2,7 +2,7 @@ package semanticAnalyzer.types;
 
 public class TypeVariable implements Type{
 
-	private Type type;
+	protected Type type;
 	private String name;
 	
 	public TypeVariable(String name) {

@@ -28,6 +28,9 @@ public enum PrimitiveType implements Type {
 	public boolean equals(TupleType otherType) {
 		return otherType.equals(this);
 	}
+	public boolean equals(TypeVariable otherType) {
+		return otherType.equals(this);
+	}
 	////////////////////////////////////////////
 	public int getSize() {
 		return sizeInBytes;

@@ -28,6 +28,16 @@ public class TupleType implements Type{
 	}
 	
 	
+	// equals
+	public boolean equals(Object otherType) {
+		if(!(otherType instanceof TupleType)) {
+			return false;
+		}
+		
+		List<Type> otherTupleArgList = ((TupleType)otherType).getParameterList();
+		return this.checkArugments(otherTupleArgList);
+	}
+	
 	////////////////////////////////////////////////////////////
 	// initialize tupleType with symbolTable or other tupleType
 	public void initialize(ParseNode node) {
@@ -179,14 +189,15 @@ public class TupleType implements Type{
 	
 	public String infoString() {
 		
+		/*
 		if(this.symbolTable != null)
 			return "TupleType[" + this.TupleName + "]\n"+ this.symbolTable.toString();
 		if(refferedType!=null)
 			return "TupleType" + "[" + this.TupleName + "] "+ refferedType.TupleName;
 		
 		return "Not-initialized";
-		
-		//return "Tuple[" + this.TupleName + "]";
+		*/
+		return "Tuple[" + this.TupleName + "]";
 	}
 	
 }

@@ -1,9 +1,10 @@
 package semanticAnalyzer;
 
 import parseTree.*;
-import semanticAnalyzer.types.TupleType;
-import symbolTable.Binding;
 import symbolTable.Scope;
+
+//import semanticAnalyzer.types.TupleType;
+//import symbolTable.Binding;
 
 
 public class SemanticAnalyzer {

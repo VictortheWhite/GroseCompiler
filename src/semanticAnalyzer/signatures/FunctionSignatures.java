@@ -7,6 +7,7 @@ import java.util.Map;
 
 import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Punctuator;
+import semanticAnalyzer.types.TupleTypeVariable;
 import semanticAnalyzer.types.Type;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.ArrayType;
@@ -71,9 +72,11 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 	
 	/////////////////////////////////////////////////////////////////////////////////
 	// Put the signatures for operators in the following static block.
-	private static TypeVariable TypeVar = new TypeVariable("S");
+	private static TypeVariable TypeVar = new TypeVariable("ArrayTypeVar");
+	private static TupleTypeVariable TupleTypeVar = new TupleTypeVariable("TupleTypeVar");
 	public static void resetTypeVar() {
 		TypeVar.reset();
+		TupleTypeVar.reset();
 	}
 
 	static {
@@ -163,14 +166,15 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER)
 			);
 		
-		// ArrayOperation------------------------------------------------------------------------------------
-		// indexing
+		// array indexing
 		new FunctionSignatures(Punctuator.OPEN_SQUARE_BRACKET,
 				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER, TypeVar)
 			);
-		// copy
+		
+		// copy--------------------------------------------------------------------------------------
 		new FunctionSignatures(Keyword.COPY,
-				new FunctionSignature(1, new ArrayType(TypeVar), new ArrayType(TypeVar))
+				new FunctionSignature(1, new ArrayType(TypeVar), new ArrayType(TypeVar)),
+				new FunctionSignature(1, TupleTypeVar, TupleTypeVar)
 		);
 		
 		// casting------------------------------------------------------------------------------------------
