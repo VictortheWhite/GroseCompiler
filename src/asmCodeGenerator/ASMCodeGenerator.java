@@ -1139,6 +1139,8 @@ public class ASMCodeGenerator {
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
+			
+			
 			int offset;
 			if(node.child(0).getType() instanceof ArrayType) {
 				offset = 13;
@@ -1146,6 +1148,13 @@ public class ASMCodeGenerator {
 				offset = 9;
 			}
 			newValueCode(node);
+			
+			if(node.child(0).getType() instanceof TupleType) {
+				TupleType childType = (TupleType)node.child(0).getType();
+				code.add(PushI, childType.getLength());
+				return;
+			}
+
 			
 			code.append(arg1);
 			code.add(PushI, offset);

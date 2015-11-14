@@ -521,7 +521,7 @@ public class Parser {
 	// expr3 -> expr3.5 [MULT expr3.5]*  (left-assoc)
 	// expr3.5 -> exprUnaryOp [:type]* 
 	// exprUnaryOp -> [!|copy]* exprArrayIndexing 
-	// exprArrayIndexing -> expr4 [ [expr] ]*
+	// exprArrayIndexing -> expr4 [ [expr] | .identifier ]*
 	// expr4 -> literal
 	//			parenthesis
 	//			[exprList]
@@ -710,7 +710,7 @@ public class Parser {
 		ParseNode UnaryRoot = null;
 		ParseNode currentNode = null;
 		if(!isUnaryOperator(nowReading)) {
-			return parseExpressionArrayIndexing();
+			return parseExpressionArrayIndexingAndTupleEntry();
 		} else {
 			UnaryRoot = new UnaryOperatorNode(nowReading);
 			currentNode = UnaryRoot;
@@ -722,21 +722,21 @@ public class Parser {
 			currentNode = UnaryOperatorNode.addAndReturnChildren(unaryOperatorToken, currentNode);	
 			readToken();
 		}
-		currentNode.appendChild(parseExpressionArrayIndexing());
+		currentNode.appendChild(parseExpressionArrayIndexingAndTupleEntry());
 		return UnaryRoot;
 
 		
 	}
 	private boolean startsExpressionUnaryOp(Token token) {
-		return isUnaryOperator(token) || startsExpressionArrayIndexing(token) || token.isLextant(Keyword.NULL);
+		return isUnaryOperator(token) || startsExpressionArrayIndexingAndTupleEntry(token) || token.isLextant(Keyword.NULL);
 	}
 	private boolean isUnaryOperator(Token token) {
 		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY);
 	}
 	
-	// exprArrayIndexing -> expr4[ [expr] ]*
-	private ParseNode parseExpressionArrayIndexing() {
-		if(!startsExpressionArrayIndexing(nowReading)) {
+	// exprArrayIndexing -> expr4 [ [expr] | .identifier ]*
+	private ParseNode parseExpressionArrayIndexingAndTupleEntry() {
+		if(!startsExpressionArrayIndexingAndTupleEntry(nowReading)) {
 			return syntaxErrorNode("expression-ArrayIndexing");
 		}
 		
@@ -749,14 +749,20 @@ public class Parser {
 				expect(Punctuator.CLOSE_SQUARE_BRACKET);
 				
 				left = ArrayIndexingNode.withChildren(ArrayIndexingToken, left, right);
-			} else
+			} else if(nowReading.isLextant(Punctuator.DOT)) {
+				Token TupleEntryToken = nowReading;
+				readToken();
+				ParseNode right = parseIdentifier();
+				left = TupleEntryNode.withChildren(TupleEntryToken, left, right);
+			}
+			else
 				break;
 			
 		}
 		
 		return left;
 	}
-	private boolean startsExpressionArrayIndexing(Token token) {
+	private boolean startsExpressionArrayIndexingAndTupleEntry(Token token) {
 		return startsExpression4(token);
 	}
 	

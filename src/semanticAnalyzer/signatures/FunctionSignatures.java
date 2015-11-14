@@ -163,7 +163,8 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 		// length
 		new FunctionSignatures(Punctuator.BAR,											
 				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
-				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER)
+				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER),
+				new FunctionSignature(1, TupleTypeVar, PrimitiveType.INTEGER)
 			);
 		
 		// array indexing

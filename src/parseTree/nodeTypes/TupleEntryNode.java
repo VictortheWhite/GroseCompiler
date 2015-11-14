@@ -1,18 +1,18 @@
 package parseTree.nodeTypes;
 
+import lexicalAnalyzer.Punctuator;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
-import tokens.LextantToken;
 import tokens.Token;
 
-public class ArrayIndexingNode extends ParseNode {
+public class TupleEntryNode extends ParseNode {
 
-	public ArrayIndexingNode(Token token) {
+	public TupleEntryNode(Token token) {
 		super(token);
-		assert(token instanceof LextantToken);
+		assert(token.isLextant(Punctuator.DOT));
 	}
 
-	public ArrayIndexingNode(ParseNode node) {
+	public TupleEntryNode(ParseNode node) {
 		super(node);
 	}
 	
@@ -20,8 +20,8 @@ public class ArrayIndexingNode extends ParseNode {
 	////////////////////////////////////////////////////////////
 	// convenience factory
 	
-	public static ArrayIndexingNode withChildren(Token token, ParseNode left, ParseNode right) {
-		ArrayIndexingNode node = new ArrayIndexingNode(token);
+	public static TupleEntryNode withChildren(Token token, ParseNode left, ParseNode right) {
+		TupleEntryNode node = new TupleEntryNode(token);
 		node.appendChild(left);
 		node.appendChild(right);
 		return node;

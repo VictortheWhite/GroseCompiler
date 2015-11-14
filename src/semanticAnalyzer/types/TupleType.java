@@ -143,18 +143,12 @@ public class TupleType implements Type{
 				
 		List<Type> typeList = getParameterList();
 		for(Type type: typeList	) {
-			Type realType = type;
-			if(type instanceof TupleType)  {
-				if(((TupleType)type).isTrivial()) {
-					realType = ((TupleType)type).getTirvialEquvalenceType();
-				}
-			}
-			if(realType instanceof ArrayType)
-				return false;
-			if(realType instanceof TupleType)
-				return false;
+			if(type instanceof ArrayType)
+				return true;
+			if(type instanceof TupleType)
+				return true;
 		}	
-		return true;
+		return false;
 	}
 	public Type getTirvialEquvalenceType() {
 		assert isTrivial();	
