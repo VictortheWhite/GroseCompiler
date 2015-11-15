@@ -112,6 +112,10 @@ public class TupleType implements Type{
 		return this.typeId;
 	}
 	
+	public Binding lookup(String name) {
+		return this.symbolTable.lookup(name);
+	}
+	
 	public List<Type> getParameterList() {
 		List<Binding> TupleArgsBindings= new ArrayList<Binding>(this.symbolTable.values());
 		List<Type> result = new ArrayList<Type>();

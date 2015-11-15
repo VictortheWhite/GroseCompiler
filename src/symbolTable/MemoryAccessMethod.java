@@ -26,10 +26,21 @@ public enum MemoryAccessMethod {
 		protected void generateBaseAddress(ASMCodeFragment code, String baseAddress) {
 			code.add(PushD, baseAddress);
 			code.add(LoadI);
-		}
-	};	
+		}		
+	},
 	
+	// base address is not needed or added in code generation
+	// this allocator only generates offsets
+	GENERATE_OFFSET_ONLY() {
+		@Override
+		protected void generateBaseAddress(ASMCodeFragment code, String baseAddress) {
+			code.add(PushI, 0);
+		}
+	};
 
+	//----------------------------------------------------------------------------------
+	// defalut methods
+	
 	public void generateAddress(ASMCodeFragment code, String baseAddress, int offset, String comment) {
 		generateBaseAddress(code, baseAddress);
 		addOffsetASM(code, offset, comment);

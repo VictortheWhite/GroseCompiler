@@ -67,14 +67,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	///////////////////////////////////////////////////////////////////////////
 	// global definition
 	@Override
-	public void visitEnter(TupleDefinitionNode node) {
+	public void visitEnter(ParameterListNode node) {
 		enterScope(node);
 	}
-	public void visitLeave(TupleDefinitionNode node) {
+	public void visitLeave(ParameterListNode node) {
 		leaveScope(node);
 	}
-	
-	
 	
 	///////////////////////////////////////////////////////////////////////////
 	// statements, declarations and reassignments
@@ -105,7 +103,9 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode expr = node.child(1);
 		if(node.child(0) instanceof ArrayIndexingNode) {
 			target = node.child(0);
-		} 
+		} else if(node.child(0) instanceof TupleEntryNode) {
+			target = node.child(0);
+		}
 		else if(node.child(0) instanceof IdentifierNode){
 			IdentifierNode identifier = (IdentifierNode) node.child(0);
 		
@@ -114,11 +114,11 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			}
 			target = identifier;		
 			} 
-			else {
-				exprNotTargetableError(node, node.child(0));
-				node.setType(PrimitiveType.ERROR);
-				return;
-			}
+		else {
+			exprNotTargetableError(node, node.child(0));
+			node.setType(PrimitiveType.ERROR);
+			return;
+		}
 		
 		
 		if(!target.getType().equals(expr.getType())) {
@@ -367,6 +367,19 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		// FunctionSignatures.resetTypeVar();		
 	}
 	
+	// expression -- tuple entry
+	@Override
+	public void visitLeave(TupleEntryNode node) {
+		if(!(node.child(0).getType() instanceof TupleType)) {
+			logError("Expected tupleType in tuple Entry: " + node.getToken().getLocation());
+			node.setType(PrimitiveType.ERROR);
+			return;
+		}
+		
+		Type nodeType = node.child(1).getType();
+		node.setType(nodeType);
+	}
+	
 	// expression -- null reference
 	@Override
 	public void visitLeave(NullReferenceNode node) {
@@ -435,6 +448,16 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	// IdentifierNodes, with helper methods
 	@Override
 	public void visit(IdentifierNode node) {
+		if(isTupleSubElement(node)) {
+			Binding binding = findSubelementBinding(node); 
+			if(binding == Binding.nullInstance()) {
+				logError("No such entry in TupleType : " + node.getToken().getLocation());
+			}
+			node.setType(binding.getType());
+			node.setBinding(binding);
+			return;
+		}
+		
 		if(!isBeingDeclared(node)) {		
 			Binding binding = node.findVariableBinding();
 			node.setType(binding.getType());
@@ -449,6 +472,21 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0))
 				||(parent instanceof ParameterSpecificationNode);
 	}
+	private boolean isTupleSubElement(IdentifierNode node) {
+		ParseNode parent = node.getParent();
+		return (parent instanceof TupleEntryNode) && (node == parent.child(1));
+	}
+	// finding binding of tuple Subelement
+	private Binding findSubelementBinding(IdentifierNode node) {
+		if(!(node.getParent().child(0).getType() instanceof TupleType)) {
+			return Binding.nullInstance();
+		}
+		
+		TupleType type = (TupleType)node.getParent().child(0).getType();
+		return type.lookup(node.getToken().getLexeme());
+	}
+	
+	////////////////////////////////////////////////////////////////////////
 	private void addBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
 			identifierNode.setBinding(Binding.nullInstance());

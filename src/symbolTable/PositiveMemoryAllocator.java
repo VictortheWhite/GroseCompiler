@@ -22,6 +22,11 @@ public class PositiveMemoryAllocator implements MemoryAllocator {
 	public PositiveMemoryAllocator(MemoryAccessMethod accessor, String baseAddress) {
 		this(accessor, baseAddress, 0);
 	}
+	
+	// no base Address ----- tuple Entry
+	public PositiveMemoryAllocator(MemoryAccessMethod accessor, int startingOffset) {
+		this(accessor, "", startingOffset);	// no base Address needed
+	}
 
 	@Override
 	public MemoryLocation allocate(int sizeInBytes) {

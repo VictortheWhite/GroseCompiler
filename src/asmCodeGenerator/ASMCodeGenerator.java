@@ -37,6 +37,7 @@ import parseTree.nodeTypes.ProgramNode;
 import parseTree.nodeTypes.SeparatorNode;
 import parseTree.nodeTypes.StringConstantNode;
 import parseTree.nodeTypes.TupleDefinitionNode;
+import parseTree.nodeTypes.TupleEntryNode;
 import parseTree.nodeTypes.UnaryOperatorNode;
 import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
@@ -261,6 +262,7 @@ public class ASMCodeGenerator {
 		private void appendPrintCode(ParseNode node) {
 
 			code.append(removeValueCode(node));
+			Macros.printStack(code, "print: ");
 			printPrimitiveType(node.getType());
 		}
 		
@@ -1068,7 +1070,18 @@ public class ASMCodeGenerator {
 		}
 		
 
-
+		// tuple entry
+		public void visitLeave(TupleEntryNode node) {
+			ASMCodeFragment tupleVarAdr = removeValueCode(node.child(0));
+			ASMCodeFragment subElement = removeAddressCode(node.child(1));
+			
+			newAddressCode(node);
+			code.append(tupleVarAdr);
+			Macros.printStack(code, "before");
+			code.append(subElement);
+			Macros.printStack(code, "after subElement");
+			code.add(Add);
+		}
 		
 		// expressions --------Binary operator
 		public void visitLeave(UnaryOperatorNode node) {

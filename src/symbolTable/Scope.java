@@ -17,14 +17,25 @@ public class Scope {
 	public static Scope createProgramScope() {
 		return new Scope(programScopeAllocator(), nullInstance());
 	}
+	public static Scope createTupleScope() {
+		return new Scope(tupleScopeAllocator(), nullInstance());
+	}
 	public Scope createSubscope() {
 		return new Scope(allocator, this);
 	}
+	
 	
 	private static MemoryAllocator programScopeAllocator() {
 		return new PositiveMemoryAllocator(
 				MemoryAccessMethod.DIRECT_ACCESS_BASE, 
 				MemoryLocation.GLOBAL_VARIABLE_BLOCK);
+	}
+	
+	private static MemoryAllocator tupleScopeAllocator() {
+		return new PositiveMemoryAllocator(
+				MemoryAccessMethod.GENERATE_OFFSET_ONLY,
+				9	// offset for the tuple header
+				);
 	}
 	
 //////////////////////////////////////////////////////////////////////

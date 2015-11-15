@@ -43,10 +43,6 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	
 	// Tuple Definition
 	@Override
-	public void visitEnter(TupleDefinitionNode node) {
-		CreateSubScope(node);
-	}
-	@Override
 	public void visitLeave(TupleDefinitionNode node) {
 		IdentifierNode TupleTypeNode = (IdentifierNode) node.child(0); 
 		Type type = new TupleType(TupleTypeNode.getToken().getLexeme());
@@ -62,7 +58,7 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	
 	@Override
 	public void visitEnter(ParameterListNode node) {
-		CreateSubScope(node);
+		CreateTupleScope(node);
 	}
 	
 	//////////////////////////////////////////////////////////////////
@@ -81,11 +77,17 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		node.setScope(scope);
 	}
 	
+	private void CreateTupleScope(ParseNode node) {
+		Scope scope = Scope.createTupleScope();
+		node.setScope(scope);
+	}
+	
 	private void CreateSubScope(ParseNode node) {
 		Scope baseScope = node.getLocalScope();
 		Scope scope = baseScope.createSubscope();
 		node.setScope(scope);
 	}
+	
 	
 	// helper methods for bindings
 	private void addBinding(IdentifierNode identifierNode, Type type) {
