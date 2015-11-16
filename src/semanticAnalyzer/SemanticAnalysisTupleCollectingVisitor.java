@@ -48,11 +48,22 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		Type type = new TupleType(TupleTypeNode.getToken().getLexeme());
 		
 		TupleTypeNode.setType(type);
-		addBinding(TupleTypeNode, type);
+		addTupleBinding(TupleTypeNode, type);
 		
 		TupleTypeNode.getBinding().setImmutablity(true);
 		TupleTypeNode.getBinding().setShadow(false);
 	}
+	//
+	@Override
+	public void visitLeave(FunctionDefinitionNode node) {
+		IdentifierNode funcName = (IdentifierNode) node.child(0);
+		Type type = new TupleType(funcName.getToken().getLexeme());
+		addFunctionBinding(funcName, type);
+		
+		funcName.getBinding().setImmutablity(true);
+		funcName.getBinding().setImmutablity(false);
+	}
+	
 	
 	// ParameterList
 	
@@ -90,11 +101,18 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	
 	
 	// helper methods for bindings
-	private void addBinding(IdentifierNode identifierNode, Type type) {
+	private void addFunctionBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
 			identifierNode.setBinding(Binding.nullInstance());
 		}
-		Binding binding = SemanticAnalyzer.getGlobalScope().createBinding(identifierNode, type);
+		Binding binding = SemanticAnalyzer.getGlobalScope().createFunctionBinding(identifierNode, type);
+		identifierNode.setBinding(binding);
+	}
+	private void addTupleBinding(IdentifierNode identifierNode, Type type) {
+		if(!identifierNode.canBeShadowed()) {
+			identifierNode.setBinding(Binding.nullInstance());
+		}
+		Binding binding = SemanticAnalyzer.getGlobalScope().createFunctionBinding(identifierNode, type);
 		identifierNode.setBinding(binding);
 	}
 }

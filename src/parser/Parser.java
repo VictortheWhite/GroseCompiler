@@ -74,13 +74,16 @@ public class Parser {
 		
 		if(startsTupleDefinition(nowReading))
 			return parseTupleDefinition();
+		if(startsFunctionDefinition(nowReading)) {
+			return parseFunctionDefinition();
+		}
 		
 		assert false : "bad token " + nowReading + " in parseGlobalDefinition()";
 		return null;		
 	}
 	
 	private boolean startsGlobalDefinition(Token token) {
-		return startsTupleDefinition(token);
+		return startsTupleDefinition(token) || startsFunctionDefinition(token);
 	}
 	
 	// tupleDefinition
@@ -100,6 +103,31 @@ public class Parser {
 	
 	private boolean startsTupleDefinition(Token token) {
 		return token.isLextant(Keyword.TUPLE);
+	}
+	
+	// functionDefinition
+	// functionDefinition -> func identifier(parameterList) -> parameterTuple block
+	
+	private ParseNode parseFunctionDefinition() {
+		if(!startsFunctionDefinition(nowReading)) {
+			return syntaxErrorNode("Function Definition");
+		}
+		Token funcToken = nowReading;
+		readToken();
+		ParseNode funcName = parseIdentifier();
+		expect(Punctuator.OPEN_PARENTHESIS);
+		ParameterListNode arguments = new ParameterListNode(previouslyRead);
+		arguments = parseParameterList(arguments);
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		expect(Punctuator.ARROW);
+		ParseNode returnTuple = parseParameterTuple();
+		ParseNode body = parseBlock();
+		
+		return FunctionDefinitionNode.withChildren(funcToken, funcName, arguments, returnTuple, body);
+	}
+	
+	private boolean startsFunctionDefinition(Token token) {
+		return token.isLextant(Keyword.FUNCTION);
 	}
 	
 	// parameterTuple -> ( parameterList )

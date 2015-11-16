@@ -33,6 +33,8 @@ public enum Keyword implements Lextant {
 	COUNT("count"),
 	BREAK("break"),
 	CONTINUE("continue"),
+	FUNCTION("func"),
+	RETURN("return"),
 	MAIN("main"),
 	NULL_KEYWORD("");
 

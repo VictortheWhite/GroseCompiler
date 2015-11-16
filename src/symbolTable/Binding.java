@@ -56,6 +56,9 @@ public class Binding {
  	public TextLocation getLocation() {
 		return textLocation;
 	}
+ 	public void setMemoryLocation(MemoryLocation location) {
+ 		this.memoryLocation = location;
+ 	}
 	public MemoryLocation getMemoryLocation() {
 		return memoryLocation;
 	}

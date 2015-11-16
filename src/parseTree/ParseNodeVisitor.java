@@ -76,6 +76,12 @@ public interface ParseNodeVisitor {
 	void visitEnter(NullReferenceNode node);
 	void visitLeave(NullReferenceNode node);
 	
+	void visitEnter(FunctionDefinitionNode node);
+	void visitLeave(FunctionDefinitionNode node);
+	
+	void visitEnter(FunctionInvocationNode node);
+	void visitLeave(FunctionInvocationNode node);
+	
 	void visitEnter(TypeNode node);
 	void visitLeave(TypeNode node);
 	
@@ -91,6 +97,7 @@ public interface ParseNodeVisitor {
 	void visit(SeparatorNode node);
 	void visit(TypeNode node);
 	void visit(BreakContinueStatementNode node);
+	void visit(FunctionReturnNode node);
 
 	
 	public static class Default implements ParseNodeVisitor
@@ -243,6 +250,18 @@ public interface ParseNodeVisitor {
 		public void visitLeave(NullReferenceNode node) {
 			defaultVisitLeave(node);
 		}
+		public void visitEnter(FunctionDefinitionNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(FunctionDefinitionNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(FunctionInvocationNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(FunctionInvocationNode node) {
+			defaultVisitLeave(node);
+		}
 		public void visitEnter(TypeNode node) {
 			defaultVisitLeave(node);
 		}
@@ -282,6 +301,9 @@ public interface ParseNodeVisitor {
 			defaultVisitForLeaf(node);
 		}
 		public void visit(BreakContinueStatementNode node) {
+			defaultVisitForLeaf(node);
+		}
+		public void visit(FunctionReturnNode node) {
 			defaultVisitForLeaf(node);
 		}
 

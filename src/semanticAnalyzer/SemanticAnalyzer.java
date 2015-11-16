@@ -1,6 +1,8 @@
 package semanticAnalyzer;
 
 import parseTree.*;
+import semanticAnalyzer.types.TupleType;
+import symbolTable.Binding;
 import symbolTable.Scope;
 
 //import semanticAnalyzer.types.TupleType;
@@ -34,8 +36,8 @@ public class SemanticAnalyzer {
 			}
 			TupleType type = (TupleType)binding.getType();
 			type.printSymbolTable();
-		}*/
-		
+		}
+		*/
 		return ASTree;
 	}
 	

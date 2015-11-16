@@ -91,6 +91,39 @@ public class Scope {
 		return new Binding(type, textLocation, memoryLocation, lexeme);
 	}
 	
+// function bindings
+	public Binding createFunctionBinding(IdentifierNode identifierNode, Type type) {
+		Token token = identifierNode.getToken();
+		symbolTable.errorIfAlreadyDefined(token);
+				
+		String lexeme = token.getLexeme();
+		Binding binding = allocateNewFunctionBinding(type, token.getLocation(), lexeme);	
+		symbolTable.install(lexeme, binding);
+
+		return binding;
+	}
+	
+	private Binding allocateNewFunctionBinding(Type type, TextLocation textLocation, String lexeme) {
+		MemoryLocation memoryLocation = allocator.allocate(0);
+		return new FunctionBinding(type, textLocation, memoryLocation, lexeme);
+	}
+	
+// tuple bindings	
+	public Binding createTupleBinding(IdentifierNode identifierNode, Type type) {
+		Token token = identifierNode.getToken();
+		symbolTable.errorIfAlreadyDefined(token);
+				
+		String lexeme = token.getLexeme();
+		Binding binding = allocateNewTupleBinding(type, token.getLocation(), lexeme);	
+		symbolTable.install(lexeme, binding);
+
+		return binding;
+	}
+	private Binding allocateNewTupleBinding(Type type, TextLocation textLocation, String lexeme) {
+		MemoryLocation memoryLocation = allocator.allocate(0);
+		return new Binding(type, textLocation, memoryLocation, lexeme);
+	}
+	
 ///////////////////////////////////////////////////////////////////////
 //toString
 	public String toString() {

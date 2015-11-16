@@ -8,6 +8,8 @@ import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.nodeTypes.*;
 import symbolTable.Binding;
+import symbolTable.MemoryAccessMethod;
+import symbolTable.PositiveMemoryAllocator;
 import symbolTable.SymbolTable;
 
 public class TupleType implements Type{
@@ -89,16 +91,23 @@ public class TupleType implements Type{
 	
 	// eliminate TrivialTupleType in symbolTable
 	public void eliminateTrivialTupleTypeInSymbolTable() {
+		boolean needToReallocate = false;
 		for(String tupleName : this.symbolTable.keySet()) {
 			Binding binding = this.symbolTable.lookup(tupleName);
 			if(!(binding.getType() instanceof TupleType)) {
 				continue;
 			}
+			needToReallocate = true;
 			TupleType type = (TupleType)binding.getType();
 			if(type.isTrivial()) {
 				binding.setType(type.getTirvialEquvalenceType());
 			}			
 		}
+		if(needToReallocate) {
+			this.symbolTable.reallocateMemory(
+				new PositiveMemoryAllocator(MemoryAccessMethod.GENERATE_OFFSET_ONLY, 9
+				));
+		}		
 	}
 	
 	// print symbolTable

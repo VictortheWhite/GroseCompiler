@@ -54,6 +54,16 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 		//node.setType(type);
 	}
 	
+	@Override
+	public void visitLeave(FunctionDefinitionNode node) {
+		IdentifierNode funcName = (IdentifierNode)node.child(0);
+		ParseNode argumentList = node.child(1);
+		ParseNode tupleInitilizer = node.child(2);
+		
+		// initialize tupleType 
+		
+	}
+	
 	// parameterList, dealing
 	@Override
 	public void visitLeave(ParameterListNode node) {

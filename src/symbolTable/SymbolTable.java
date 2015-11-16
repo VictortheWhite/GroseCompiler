@@ -1,13 +1,15 @@
 package symbolTable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 //import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import logging.GrouseLogger;
-
+import semanticAnalyzer.types.Type;
 import tokens.Token;
 
 public class SymbolTable {
@@ -28,6 +30,17 @@ public class SymbolTable {
 	}
 	public Binding lookup(String identifier) {
 		return table.getOrDefault(identifier, Binding.nullInstance());
+	}
+	
+	////////////////////////////////////////////////////////////////////
+	// reallocate memory, for trivial type replacement for parameterList of Tuples
+	// accepts a memory allocator, and reallocates memory
+	public void reallocateMemory(MemoryAllocator allocator) {
+		List<Binding> bindings = new ArrayList<Binding>(values());
+		for(Binding binding: bindings) {
+			Type bindingType = binding.getType();
+			binding.setMemoryLocation(allocator.allocate(bindingType.getSize()));
+		}
 	}
 	
 	///////////////////////////////////////////////////////////////////////
