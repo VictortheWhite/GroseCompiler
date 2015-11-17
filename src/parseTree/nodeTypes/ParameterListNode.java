@@ -22,7 +22,6 @@ public class ParameterListNode extends ParseNode {
 		}
 		return size;
 	}
-
 	
 	///////////////////////////////////////////////////////////
 	// boilerplate for visitors

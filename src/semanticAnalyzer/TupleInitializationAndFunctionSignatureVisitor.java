@@ -69,6 +69,7 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 		paraTypeList.add(tupleType);
 		Type[] arr = paraTypeList.toArray(new Type[paraTypeList.size()]);
 		binding.setSignature(new FunctionSignature(1, arr));
+		
 	}
 	
 	// parameterList, dealing
@@ -118,11 +119,6 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 			Binding binding = globalTable.lookup(tupleName);
 			assert binding.getType() instanceof TupleType;
 			TupleType type = (TupleType)binding.getType();
-			/*
-			System.out.println(type);
-			type.printSymbolTable();
-			System.out.println(type.isTrivial());
-			*/
 			type.compressPath();
 			if(type.isTrivial()) {
 				binding.setType(type.getTirvialEquvalenceType());
@@ -138,7 +134,7 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 			
 			// eliminate trivial type in functionSignature
 			if(binding instanceof FunctionBinding) {
-				((FunctionBinding)binding).getSignature().eliminateTrivialTuple();;
+				((FunctionBinding)binding).getSignature().eliminateTrivialTuple();
 			}
 			
 			// eliminate trivial type in tuple SymbolTable

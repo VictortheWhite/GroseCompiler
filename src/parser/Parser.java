@@ -257,6 +257,9 @@ public class Parser {
 		if(startsReturnStatement(nowReading)) {
 			return parseReturnStatement();
 		}
+		if(startsCallStatement(nowReading)) {
+			return parseCallStatement();
+		}
 		if(startsBlock(nowReading)) {
 			return parseBlock();
 		}
@@ -272,7 +275,8 @@ public class Parser {
 			   startsForStatement(token) ||
 			   startsBlock(token) ||
 			   startsBreakContinue(token) ||
-			   startsReturnStatement(token);
+			   startsReturnStatement(token) ||
+			   startsCallStatement(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -559,6 +563,30 @@ public class Parser {
 		return token.isLextant(Keyword.RETURN);
 	}
 	
+	// call stmt
+	// callStatement -> call funcInvocation
+	private ParseNode parseCallStatement() {
+		if(!startsCallStatement(nowReading)) {
+			return syntaxErrorNode("call stmt");
+		}
+		Token CallToken = nowReading;
+		readToken();
+		Token identifierToken = nowReading;
+		ParseNode identifier = parseIdentifier();
+		expect(Punctuator.OPEN_PARENTHESIS);
+		ParseNode exprList = parseExpressionList(new ExpressionListNode(previouslyRead));
+		expect(Punctuator.CLOSE_PARENTHESIS);
+		expect(Punctuator.TERMINATOR);
+		FunctionInvocationNode funcInvoNode = FunctionInvocationNode.withChildren(identifierToken, identifier, exprList);
+		
+		return FunctionCallNode.withChildren(CallToken, funcInvoNode);
+		
+	}
+	
+	private boolean startsCallStatement(Token token) {
+		return token.isLextant(Keyword.CALL);
+	}
+	
 	///////////////////////////////////////////////////////////
 	// expressions
 	// expr  -> expr0or
@@ -835,17 +863,7 @@ public class Parser {
 		else if(startsLengthOperation(nowReading))
 			return parseLength();
 		else if(startsLiteral(nowReading)) {
-			ParseNode result = parseLiteral();
-			if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
-				Token functionInvocationToken = previouslyRead;
-				Token exprListToken = nowReading;
-				readToken();
-				ParseNode exprList = parseExpressionList(new ExpressionListNode(exprListToken));
-				expect(Punctuator.CLOSE_PARENTHESIS);
-				result = FunctionInvocationNode.withChildren(functionInvocationToken, result, exprList);
-			}
-			
-			return result;
+			return parseLiteral();
 		}
 		
 		return syntaxErrorNode("expression<4>");
@@ -988,7 +1006,16 @@ public class Parser {
 			return parseFloatingNumber();
 		}
 		if(startsIdentifier(nowReading)) {
-			return parseIdentifier();
+			ParseNode result = parseIdentifier();
+			if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
+				Token functionInvocationToken = previouslyRead;
+				Token exprListToken = nowReading;
+				readToken();
+				ParseNode exprList = parseExpressionList(new ExpressionListNode(exprListToken));
+				expect(Punctuator.CLOSE_PARENTHESIS);
+				result = FunctionInvocationNode.withChildren(functionInvocationToken, result, exprList);
+			}			
+			return result;
 		}
 		if(startsBooleanConstant(nowReading)) {
 			return parseBooleanConstant();

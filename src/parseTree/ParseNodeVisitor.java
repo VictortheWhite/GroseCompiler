@@ -36,6 +36,9 @@ public interface ParseNodeVisitor {
 	void visitEnter(PrintStatementNode node);
 	void visitLeave(PrintStatementNode node);
 	
+	void visitEnter(FunctionCallNode node);
+	void visitLeave(FunctionCallNode node);
+	
 	void visitEnter(ProgramNode node);
 	void visitLeave(ProgramNode node);
 	
@@ -122,6 +125,12 @@ public interface ParseNodeVisitor {
 			defaultVisitEnter(node);
 		}
 		public void visitLeave(ReassignmentNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(FunctionCallNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitLeave(FunctionCallNode node) {
 			defaultVisitLeave(node);
 		}
 		public void visitEnter(MainBlockNode node) {

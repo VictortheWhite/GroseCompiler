@@ -91,7 +91,7 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		addFunctionBinding(funcName, type);
 		
 		funcName.getBinding().setImmutablity(true);
-		funcName.getBinding().setImmutablity(false);
+		funcName.getBinding().setShadow(false);
 	}
 	
 	
@@ -139,7 +139,7 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		if(!identifierNode.canBeShadowed()) {
 			identifierNode.setBinding(Binding.nullInstance());
 		}
-		Binding binding = SemanticAnalyzer.getGlobalScope().createFunctionBinding(identifierNode, type);
+		Binding binding = SemanticAnalyzer.getGlobalScope().createTupleBinding(identifierNode, type);
 		identifierNode.setBinding(binding);
 	}
 }

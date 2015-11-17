@@ -107,6 +107,9 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			// just put it into the global symbol table
 			// and use it as variable
 			Type realType = returnType.getTirvialEquvalenceType();
+			if(realType == PrimitiveType.VOID) {
+				return;
+			}		
 			String id = returnType.getBindings().get(0).getLexeme();
 			Binding returnVarBinding = parameterScope.createBinding(id, realType);
 			returnVarBinding.setImmutablity(false);
@@ -139,8 +142,6 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override
 	public void visitLeave(FunctionDefinitionNode node) {		
 		leaveScope(node);
-		System.out.println(node.getScope());
-
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
@@ -418,9 +419,11 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		assert node.child(0) instanceof IdentifierNode;
 		IdentifierNode functionNode = (IdentifierNode) node.child(0);
 		ParseNode argList = node.child(1);
-		
+				
 		if(!(functionNode.getBinding() instanceof FunctionBinding)) {
 			logError("No function "+node.getToken().getLexeme() +node.getToken().getLocation());
+			node.setType(PrimitiveType.ERROR);
+			return;
 		}
 		FunctionBinding funcBinding = (FunctionBinding)functionNode.getBinding();
 		FunctionSignature signature = funcBinding.getSignature();
@@ -438,6 +441,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 		
+		if(node.getType() == PrimitiveType.VOID) {
+			if(!(node.getParent() instanceof FunctionCallNode)) {
+				logError("void function can only be invocated by 'CALL'" + node.getToken().getLocation());
+				node.setType(PrimitiveType.ERROR);
+			}
+		}
 		
 	}
 	

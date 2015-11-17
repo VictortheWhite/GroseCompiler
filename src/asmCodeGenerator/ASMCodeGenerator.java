@@ -22,6 +22,7 @@ import parseTree.nodeTypes.CharacterConstantNode;
 import parseTree.nodeTypes.ForControlPhraseNode;
 import parseTree.nodeTypes.ForStatementNode;
 import parseTree.nodeTypes.FreshArrayNode;
+import parseTree.nodeTypes.FunctionCallNode;
 import parseTree.nodeTypes.FunctionDefinitionNode;
 import parseTree.nodeTypes.FunctionInvocationNode;
 import parseTree.nodeTypes.FunctionReturnNode;
@@ -219,10 +220,13 @@ public class ASMCodeGenerator {
 		public void visitLeave(MainBlockNode node) {
 			newVoidCode(node);
 			code.add(Label, RunTime.MAIN_PROGRAM_LABEL);
+			//Macros.printStack(code, "before main");
 			for(ParseNode child : node.getChildren()) {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
 			}
+			//Macros.printStack(code, "after main");
+
 		}
 		public void visitLeave(BlockNode node)	{
 			newVoidCode(node);
@@ -321,43 +325,55 @@ public class ASMCodeGenerator {
 			code.add(LoadI);
 			code.add(PushI, frameSize);
 			code.add(Add);
-			code.add(StoreI);						
+			code.add(StoreI);						// [...R]		
 			
-			//[...R]
-			// increment sp by argumentsSize
-			code.add(PushD, RunTime.STACK_POINTER);
-			code.add(LoadI);
-			code.add(LoadI);						// [...R retureVar]
-			code.add(PushD, RunTime.STACK_POINTER);
-			code.add(LoadI);						// [...R returnVar sp]
-			code.add(PushI, exprList.getExprListSize());
-			code.add(Add);							// [...R returnVar sp*]
-			code.add(Duplicate);
-			code.add(PushD, RunTime.STACK_POINTER); 
-			code.add(Exchange);
-			code.add(StoreI);						// [...R returnVar sp]
-			code.add(Exchange);
-			code.add(opcodeForStore(funcName.getType()));
+			Type returnType = funcName.getType();			
+			if(returnType != PrimitiveType.VOID) {
+				ASMOpcode loadOpcode = LoadArrayOpcode(returnType);
+				ASMOpcode storeOpcode = opcodeForStore(returnType);
+				//[...R]
+				// increment sp by argumentsSize
+				code.add(PushD, RunTime.STACK_POINTER);
+				code.add(LoadI);						// [...R sp]
+				code.add(loadOpcode);						// [...R returnVar]
+				code.add(PushD, RunTime.STACK_POINTER);
+				code.add(LoadI);						// [...R returnVar sp]
+				code.add(PushI, exprList.getExprListSize());
+				code.add(Add);							// [...R returnVar sp*]
+				code.add(Duplicate);
+				code.add(PushD, RunTime.STACK_POINTER); 
+				code.add(Exchange);
+				code.add(StoreI);						// [...R returnVar sp]
+				code.add(Exchange);
+				code.add(storeOpcode);
 			
-			// [...R]
-			// push returnVar onto ASM stack
-			// increment sp by returnVar type size
-			code.add(PushD, RunTime.STACK_POINTER);
-			code.add(LoadI);
-			code.add(LoadArrayOpcode(funcName.getType())); // [...R returnVar]
-			code.add(PushD, RunTime.STACK_POINTER);
-			code.add(Duplicate);
-			code.add(LoadI);
-			code.add(PushI, funcName.getType().getSize());
-			code.add(Add);
-			code.add(StoreI);						// [...R returnVar]
+				// [...R]
+				// push returnVar onto ASM stack
+				// increment sp by returnVar type size
+				code.add(PushD, RunTime.STACK_POINTER);
+				code.add(LoadI);
+				code.add(loadOpcode); // [...R returnVar]
+				code.add(PushD, RunTime.STACK_POINTER);
+				code.add(Duplicate);
+				code.add(LoadI);
+				code.add(PushI, funcName.getType().getSize());
+				code.add(Add);
+				code.add(StoreI);						// [...R returnVar]
+			} else {
+				Macros.loadIFrom(code, RunTime.STACK_POINTER);
+				code.add(PushI, exprList.getExprListSize());
+				code.add(Add);
+				Macros.storeITo(code, RunTime.STACK_POINTER);
+			}
 			
 			
 			// stack pointer points to old frame of prevously procedure now
 			// return
-			code.add(Exchange);
+			if(returnType != PrimitiveType.VOID) {
+				code.add(Exchange);
+			}				
 			code.add(Return);
-		
+
 		}
 		
 
@@ -583,6 +599,7 @@ public class ASMCodeGenerator {
 			case FLOATING:	return LoadF;
 			case CHARACTER:	return LoadC;
 			case STRING:	return LoadI;
+			case VOID:		return Pop;	 // pop the load address
 			default:		
 				assert false : "Type " + type + " unimplemented in ASMCodeGenerator.LoadArrayOpcode()";
 				return null;
@@ -639,7 +656,20 @@ public class ASMCodeGenerator {
 			assert false: "Type " + type + " unimplemented in opcodeForStore()";
 			return null;
 		}
+		
+		///////////////////////////////////////////////////////////////////////////
+		// function call
+		public void visitLeave(FunctionCallNode node) {
+			newVoidCode(node);
+			//Macros.printStack(code, "beforeCall");
+			code.append(removeValueCode(node.child(0)));
+			//Macros.printStack(code, "afterCall");
 
+			if(node.child(0).getType() != PrimitiveType.VOID) {
+				code.add(Pop);
+			}
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// control flows statements------ if while and for
 		public void visitLeave(IfStatementNode node) {
@@ -1471,13 +1501,13 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			
-			
+			//Macros.printStack(code, "beforeInvocation");
+
 			// push arguments onto frame stack
 			// decrement stack pointer accordingly
 			for(ParseNode expr : exprList.getChildren()) {
 				Type exprType = expr.getType();
 				ASMOpcode storeOpcode = opcodeForStore(exprType);
-				
 				code.add(PushD, RunTime.STACK_POINTER);
 				code.add(LoadI);							// [...sp]
 				code.add(PushI, -exprType.getSize());
@@ -1491,40 +1521,43 @@ public class ASMCodeGenerator {
 			}
 			
 			
+				
 			// push return variable onto frame stack
 			// decrement stack pointer accordingly
-			ASMOpcode storeOpcode = opcodeForStore(returnType);
+				
+			// decrement stack pointer
 			code.add(PushD, RunTime.STACK_POINTER);
 			code.add(LoadI);							// [...sp]
 			code.add(PushI, -returnType.getSize());
 			code.add(Add);								// [...sp*]
-			code.add(Duplicate);
 			code.add(PushD, RunTime.STACK_POINTER);
 			code.add(Exchange);
-			code.add(StoreI);							// [...sp ] sp -= typeSize
+			code.add(StoreI);							// [... ] sp -= typeSize
 			
-			
-			// push returnVariable onto ASM stack
-			if(returnType instanceof TupleType) {
-				TupleType returnTupleType = (TupleType)returnType;
-				code.add(PushI, returnTupleType.getBytesNeeded());
-				code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
-				header.addTupleHeader(code, returnTupleType);
-			} else {
-				if(returnType == PrimitiveType.FLOATING) 
-					code.add(PushF, 0);
-				else
-					code.add(PushI, 0);
+			if(returnType != PrimitiveType.VOID) {
+				ASMOpcode storeOpcode = opcodeForStore(returnType);
+				Macros.loadIFrom(code, RunTime.STACK_POINTER);
+				// push returnVariable onto ASM stack
+				if(returnType instanceof TupleType) {
+					TupleType returnTupleType = (TupleType)returnType;
+					code.add(PushI, returnTupleType.getBytesNeeded());
+					code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
+					header.addTupleHeader(code, returnTupleType);
+				} else {
+					if(returnType == PrimitiveType.FLOATING) 
+						code.add(PushF, 0);
+					else
+						code.add(PushI, 0);
+				}
+				// store returnVarible to FRAME stack
+				code.add(storeOpcode);
 			}
-			// store returnVarible onto FRAME stack
-			code.add(storeOpcode);
-						
 			// args and returnVar on FrameStack
 			// Stack Pointer adjusted
 			// Call function
 			code.add(Call, JumpFunctionLabel);
-			
-			
+			//Macros.printStack(code, "afterInvocation");
+
 		}
 		
 		
