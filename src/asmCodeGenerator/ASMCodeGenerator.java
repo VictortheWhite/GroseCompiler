@@ -24,6 +24,7 @@ import parseTree.nodeTypes.ForStatementNode;
 import parseTree.nodeTypes.FreshArrayNode;
 import parseTree.nodeTypes.FunctionDefinitionNode;
 import parseTree.nodeTypes.FunctionInvocationNode;
+import parseTree.nodeTypes.FunctionReturnNode;
 import parseTree.nodeTypes.LengthOperatorNode;
 import parseTree.nodeTypes.MainBlockNode;
 import parseTree.nodeTypes.DeclarationNode;
@@ -239,6 +240,7 @@ public class ASMCodeGenerator {
 			ASMCodeFragment userCodeBody = removeVoidCode(node.child(3));
 			FunctionBinding funcBinding = (FunctionBinding)funcName.getBinding();
 			String StartLabel = funcBinding.getFunctionStartLabel();
+			String returnLabel = funcBinding.getRetureLabel();
 			Scope procedureScope = node.child(3).getScope();
 			
 			
@@ -293,6 +295,9 @@ public class ASMCodeGenerator {
 			
 			//-------------------------------------------
 			// function teardown
+			
+			// return label
+			code.add(Label, returnLabel);
 			
 			// load return address onto ASM Stack
 			// change fp to old fp
@@ -1563,6 +1568,11 @@ public class ASMCodeGenerator {
 		public void visit(BreakContinueStatementNode node) {
 			newVoidCode(node);			
 			code.add(Jump, node.getJumpLabel());
+		}
+		public void visit(FunctionReturnNode node) {
+			newVoidCode(node);
+			String returnLabel = node.getReturnLabel();
+			code.add(Jump, returnLabel);
 		}
 	}
 

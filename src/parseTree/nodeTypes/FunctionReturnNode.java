@@ -3,6 +3,7 @@ package parseTree.nodeTypes;
 import lexicalAnalyzer.Keyword;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
+import symbolTable.FunctionBinding;
 import tokens.Token;
 
 public class FunctionReturnNode extends ParseNode {
@@ -23,12 +24,12 @@ public class FunctionReturnNode extends ParseNode {
 		return findFunctionDefNode() != null;
 	}
 	
-	public String getJumpLabel() {
-		ParseNode LoopNode = findFunctionDefNode();
+	public String getReturnLabel() {
+		ParseNode FunctionInvocationNode = findFunctionDefNode();
+		IdentifierNode funcName = (IdentifierNode)FunctionInvocationNode.child(0);
+		FunctionBinding binding = (FunctionBinding)funcName.getBinding();
 		
-		
-		assert false;
-		return "";
+		return binding.getRetureLabel();
 	}
 	
 	private ParseNode findFunctionDefNode() {
