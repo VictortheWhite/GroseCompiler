@@ -427,7 +427,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		}
 		FunctionBinding funcBinding = (FunctionBinding)functionNode.getBinding();
 		FunctionSignature signature = funcBinding.getSignature();
-		
+				
 		List<Type> exprTypesList = new ArrayList<Type>();
 		for(ParseNode current : argList.getChildren()) {
 			exprTypesList.add(current.getType());
@@ -634,7 +634,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 
 	private void typeCheckError(ParseNode node, List<Type> operandTypes) {
 		Token token = node.getToken();
-		
+				
 		logError("operator " + token.getLexeme() + " not defined for types " 
 				 + operandTypes  + " at " + token.getLocation());	
 	}

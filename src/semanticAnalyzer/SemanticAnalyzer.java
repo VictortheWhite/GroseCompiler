@@ -27,7 +27,7 @@ public class SemanticAnalyzer {
 		ASTree.accept(new TupleInitializationAndFunctionSignatureVisitor());
 		ASTree.accept(new SemanticAnalysisVisitor());
 		
-		/*
+		
 		System.out.println("Global "+globalScope.getSymbolTable());
 		for(String tupleName : globalScope.getSymbolTable().keySet()) {
 			Binding binding = globalScope.getSymbolTable().lookup(tupleName);
@@ -37,7 +37,7 @@ public class SemanticAnalyzer {
 			TupleType type = (TupleType)binding.getType();
 			type.printSymbolTable();
 		}
-		*/
+		
 		
 		return ASTree;
 	}

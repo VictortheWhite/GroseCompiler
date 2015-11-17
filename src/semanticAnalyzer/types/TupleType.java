@@ -36,6 +36,11 @@ public class TupleType implements Type{
 			return false;
 		}
 		
+		if(this.symbolTable == null || ((TupleType)otherType).symbolTable == null) {
+			// for path compression
+			return this == otherType;
+		}
+		
 		List<Type> otherTupleArgList = ((TupleType)otherType).getParameterList();
 		return this.checkArugments(otherTupleArgList);
 	}
@@ -94,6 +99,9 @@ public class TupleType implements Type{
 		boolean needToReallocate = false;
 		for(String tupleName : this.symbolTable.keySet()) {
 			Binding binding = this.symbolTable.lookup(tupleName);
+			if(binding.getType() instanceof ArrayType) {
+				((ArrayType)binding.getType()).eliminateTrivialTuple();
+			}
 			if(!(binding.getType() instanceof TupleType)) {
 				continue;
 			}
@@ -114,6 +122,7 @@ public class TupleType implements Type{
 	public void printSymbolTable() {
 		System.out.println(this.TupleName + " " +this.symbolTable);
 	}
+	
 	
 	/////////////////////////////////////////////////////////////
 	// attributes
@@ -180,6 +189,9 @@ public class TupleType implements Type{
 				return ((TupleType)resultType).getTirvialEquvalenceType();
 			}
 		} 
+		if(resultType instanceof ArrayType) {
+			((ArrayType)resultType).eliminateTrivialTuple();
+		}
 		return resultType;
 	}
 

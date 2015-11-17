@@ -25,6 +25,21 @@ public class ArrayType implements Type{
 			return otherType.equals(this);	
 	}
 	
+	//////////////////////////
+	public void eliminateTrivialTuple() {
+		if(subType instanceof ArrayType) {
+			((ArrayType)subType).eliminateTrivialTuple();
+			return;
+		}
+		if(subType instanceof TupleType) {
+			if(((TupleType)subType).isTrivial()) {
+				this.subType = ((TupleType)subType).getTirvialEquvalenceType();
+			}
+			return;
+		}
+	}
+	
+	
 	public Type getSubType() {
 		return subType;
 	}

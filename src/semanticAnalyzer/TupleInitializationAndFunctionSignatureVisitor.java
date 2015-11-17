@@ -137,6 +137,11 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 				((FunctionBinding)binding).getSignature().eliminateTrivialTuple();
 			}
 			
+			// eliminate trivial tuple in ArrayType
+			if(binding.getType() instanceof ArrayType) {
+				((ArrayType)binding.getType()).eliminateTrivialTuple();
+			}
+			
 			// eliminate trivial type in tuple SymbolTable
 			if(!(binding.getType() instanceof TupleType)) {
 				continue;

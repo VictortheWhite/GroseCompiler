@@ -2,6 +2,7 @@ package semanticAnalyzer.signatures;
 
 import java.util.List;
 
+import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
@@ -15,6 +16,12 @@ public class FunctionSignature {
 	private Type[] paramTypes;
 	Object whichVariant;
 	
+	
+	public void printArgs() {
+		for(int i=0;i<paramTypes.length;i++)
+			System.out.println(paramTypes[i].infoString());
+		System.out.println("\n\n");
+	}
 	
 	///////////////////////////////////////////////////////////////
 	// construction
@@ -40,10 +47,17 @@ public class FunctionSignature {
 				if(((TupleType)paramTypes[i]).isTrivial())
 					paramTypes[i] = ((TupleType)paramTypes[i]).getTirvialEquvalenceType();
 			}
+			if(paramTypes[i] instanceof ArrayType) {
+				((ArrayType)paramTypes[i]).eliminateTrivialTuple();
+			}
 		}
+		
 		if(resultType instanceof TupleType) {
 			if(((TupleType)resultType).isTrivial())
 				resultType = ((TupleType)resultType).getTirvialEquvalenceType();
+		}
+		if(resultType instanceof ArrayType) {
+			((ArrayType)resultType).eliminateTrivialTuple();
 		}
 		
 	}
