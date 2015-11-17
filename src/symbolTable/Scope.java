@@ -20,21 +20,42 @@ public class Scope {
 	public static Scope createTupleScope() {
 		return new Scope(tupleScopeAllocator(), nullInstance());
 	}
+	public static Scope createParameterScope() {
+		return new Scope(parameterScopeAllocator(), nullInstance());
+	}
+	public static Scope createProcedureScope() {
+		return new Scope(procedureScopeAllocator(), nullInstance());
+	}
 	public Scope createSubscope() {
 		return new Scope(allocator, this);
 	}
 	
-	
 	private static MemoryAllocator programScopeAllocator() {
 		return new PositiveMemoryAllocator(
 				MemoryAccessMethod.DIRECT_ACCESS_BASE, 
-				MemoryLocation.GLOBAL_VARIABLE_BLOCK);
+				MemoryLocation.GLOBAL_VARIABLE_BLOCK
+				);
 	}
 	
 	private static MemoryAllocator tupleScopeAllocator() {
 		return new PositiveMemoryAllocator(
 				MemoryAccessMethod.GENERATE_OFFSET_ONLY,
 				9	// offset for the tuple header
+				);
+	}
+	
+	private static MemoryAllocator parameterScopeAllocator() {
+		return new ParameterMemoryAllocator(
+				MemoryAccessMethod.INDIRECT_ACCESS_BASE,
+				MemoryLocation.FRAME_POINTER
+				);
+	}
+	
+	private static MemoryAllocator procedureScopeAllocator() {
+		return new NegativeMemoryAllocator(
+				MemoryAccessMethod.INDIRECT_ACCESS_BASE,
+				MemoryLocation.FRAME_POINTER,
+				-8
 				);
 	}
 	
@@ -86,13 +107,32 @@ public class Scope {
 
 		return binding;
 	}
+	public Binding createBinding(String lexeme, Type type) {
+		symbolTable.errorIfAlreadyDefined(lexeme);
+				
+		Binding binding = allocateNewBinding(type, new TextLocation("currentTest.grouse", -1, -1), lexeme);	
+		symbolTable.install(lexeme, binding);
+
+		return binding;
+	}
 	private Binding allocateNewBinding(Type type, TextLocation textLocation, String lexeme) {
 		MemoryLocation memoryLocation = allocator.allocate(type.getSize());
 		return new Binding(type, textLocation, memoryLocation, lexeme);
 	}
 	
+// return variable bindings
+// accepts a memory location
+	public Binding createReturnVariableBinding(Type type, String lexeme, MemoryLocation memLocation) {
+		symbolTable.errorIfAlreadyDefined(lexeme);
+		
+		Binding binding = new Binding(type, new TextLocation("input_file", -1, -1), memLocation, lexeme);
+		symbolTable.install(lexeme, binding);
+		
+		return binding;
+	}
 // function bindings
-	public Binding createFunctionBinding(IdentifierNode identifierNode, Type type) {
+// takes 0 bytes in globalSymbolTable
+ 	public Binding createFunctionBinding(IdentifierNode identifierNode, Type type) {
 		Token token = identifierNode.getToken();
 		symbolTable.errorIfAlreadyDefined(token);
 				
@@ -109,6 +149,7 @@ public class Scope {
 	}
 	
 // tuple bindings	
+// takes 0 bytes in globalSymbolTable
 	public Binding createTupleBinding(IdentifierNode identifierNode, Type type) {
 		Token token = identifierNode.getToken();
 		symbolTable.errorIfAlreadyDefined(token);
@@ -123,6 +164,8 @@ public class Scope {
 		MemoryLocation memoryLocation = allocator.allocate(0);
 		return new Binding(type, textLocation, memoryLocation, lexeme);
 	}
+	
+	
 	
 ///////////////////////////////////////////////////////////////////////
 //toString

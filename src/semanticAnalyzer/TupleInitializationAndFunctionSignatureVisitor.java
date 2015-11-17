@@ -1,27 +1,22 @@
 package semanticAnalyzer;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
-import lexicalAnalyzer.Keyword;
-import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import logging.GrouseLogger;
 import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
 import parseTree.nodeTypes.*;
 import semanticAnalyzer.signatures.FunctionSignature;
-import semanticAnalyzer.signatures.FunctionSignatures;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
+import symbolTable.FunctionBinding;
 import symbolTable.Scope;
 import symbolTable.SymbolTable;
-import tokens.IdentifierToken;
-import tokens.LextantToken;
-import tokens.Token;
 
 public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVisitor.Default{
 
@@ -61,16 +56,24 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 		ParseNode tupleInitilizer = node.child(2);
 		
 		// initialize tupleType 
-		
+		assert funcName.getType() instanceof TupleType;
+		TupleType tupleType = (TupleType)funcName.getType();
+		tupleType.initialize(tupleInitilizer);
+				
+		// initialize functionSignature
+		FunctionBinding binding = (FunctionBinding)funcName.getBinding();
+		List<Type> paraTypeList = new ArrayList<Type>();
+		for(ParseNode paraSpec: argumentList.getChildren()) {
+			paraTypeList.add(paraSpec.child(0).getType());
+		}
+		paraTypeList.add(tupleType);
+		Type[] arr = paraTypeList.toArray(new Type[paraTypeList.size()]);
+		binding.setSignature(new FunctionSignature(1, arr));
 	}
 	
 	// parameterList, dealing
 	@Override
 	public void visitLeave(ParameterListNode node) {
-		if(!(node.getParent() instanceof TupleDefinitionNode)) {
-			return;
-		}
-		
 		Scope parameterScope = node.getScope();
 		
 		for(ParseNode paraSpec : node.getChildren()) {
@@ -115,6 +118,11 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 			Binding binding = globalTable.lookup(tupleName);
 			assert binding.getType() instanceof TupleType;
 			TupleType type = (TupleType)binding.getType();
+			/*
+			System.out.println(type);
+			type.printSymbolTable();
+			System.out.println(type.isTrivial());
+			*/
 			type.compressPath();
 			if(type.isTrivial()) {
 				binding.setType(type.getTirvialEquvalenceType());
@@ -126,7 +134,14 @@ public class TupleInitializationAndFunctionSignatureVisitor extends ParseNodeVis
 	private void eliminateTrivialTupleTypeInTupleSymbolTable() {
 		SymbolTable globalTable = SemanticAnalyzer.getGlobalScope().getSymbolTable();
 		for(String tupleName : globalTable.keySet()) {
-			Binding binding = globalTable.lookup(tupleName);
+			Binding binding = globalTable.lookup(tupleName);		
+			
+			// eliminate trivial type in functionSignature
+			if(binding instanceof FunctionBinding) {
+				((FunctionBinding)binding).getSignature().eliminateTrivialTuple();;
+			}
+			
+			// eliminate trivial type in tuple SymbolTable
 			if(!(binding.getType() instanceof TupleType)) {
 				continue;
 			}

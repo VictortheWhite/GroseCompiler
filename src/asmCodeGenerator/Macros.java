@@ -2,6 +2,7 @@ package asmCodeGenerator;
 
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
+import asmCodeGenerator.runtime.RunTime;
 
 public class Macros {
 	
@@ -109,6 +110,25 @@ public class Macros {
 		code.add(LoadI);		// [... ptr refcount]
 		printStackTop(code, "<%d>\n");
 		code.add(Pop);			// [... ptr]
+	}
+	
+	public static void printFramePointer(ASMCodeFragment code, String prefix) {
+		code.add(PushD, RunTime.FRAME_POINTER);
+		code.add(LoadI);
+		printString(code, prefix + " FramePointer: ");
+		printStackTop(code, "%d");
+		code.add(Pop);
+		printString(code, "\n");
+
+	}
+	
+	public static void printStackPointer(ASMCodeFragment code, String prefix) {
+		code.add(PushD, RunTime.STACK_POINTER);
+		code.add(LoadI);
+		printString(code, prefix + " StackPointer: ");
+		printStackTop(code, "%d");
+		code.add(Pop);
+		printString(code, "\n");
 	}
 	
 	

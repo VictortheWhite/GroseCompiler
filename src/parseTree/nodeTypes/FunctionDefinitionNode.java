@@ -6,8 +6,6 @@ import lexicalAnalyzer.Keyword;
 import tokens.Token;
 
 public class FunctionDefinitionNode extends ParseNode {
-
-	private String FunctionStartLabel;
 	
 	public FunctionDefinitionNode(Token token) {
 		super(token);
@@ -18,9 +16,6 @@ public class FunctionDefinitionNode extends ParseNode {
 		super(node);
 	}
 	
-	public String getFunctionStartLable() {
-		return this.FunctionStartLabel;
-	}
 	
 	////////////////////////////////////////////////////////////
 	// convenience factory

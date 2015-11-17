@@ -64,6 +64,14 @@ public class SymbolTable {
 			multipleDefinitionError(token);
 		}
 	}
+	public void errorIfAlreadyDefined(String identifier) {
+		if(containsKey(identifier)) {
+			GrouseLogger log = GrouseLogger.getLogger("compiler.symbolTable");
+			log.severe("variable \"" + identifier + 
+					          "\" multiply defined");
+		}
+	}
+	
 	protected static void multipleDefinitionError(Token token) {
 		GrouseLogger log = GrouseLogger.getLogger("compiler.symbolTable");
 		log.severe("variable \"" + token.getLexeme() + 

@@ -16,6 +16,9 @@ public class RunTime {
 	public static final String BOOLEAN_FALSE_STRING   = "$boolean-false-string";
 	public static final String GLOBAL_MEMORY_BLOCK    = "$global-memory-block";
 	public static final String USABLE_MEMORY_START    = "$usable-memory-start";
+	public static final String FRAME_POINTER		  = "$frame-pointer";
+	public static final String STACK_POINTER		  = "$stack-pointer";
+	
 	public static final String MAIN_PROGRAM_LABEL     = "$$main";
 	
 	public static final String STRING_CONCA_ARG1	  = "$string-concatenation-arg1";
@@ -34,6 +37,8 @@ public class RunTime {
 
 	private ASMCodeFragment environmentASM() {
 		ASMCodeFragment result = new ASMCodeFragment(GENERATES_VOID);
+		
+		result.append(initializeFPandSP());
 		result.append(jumpToMain());
 		result.append(stringsForPrintf());
 		result.append(runtimeErrors());
@@ -47,6 +52,26 @@ public class RunTime {
 	private ASMCodeFragment jumpToMain() {
 		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
 		frag.add(Jump, MAIN_PROGRAM_LABEL);
+		return frag;
+	}
+	
+	private ASMCodeFragment initializeFPandSP() {
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
+			
+		frag.add(DLabel, FRAME_POINTER);
+		frag.add(DataI, 0);
+		frag.add(DLabel, STACK_POINTER);
+		frag.add(DataI, 0);
+		
+		frag.add(Memtop);
+		frag.add(Duplicate);				// [...memtop memtop]
+		frag.add(PushD, FRAME_POINTER);
+		frag.add(Exchange);					// [...memtop fp memtop]
+		frag.add(StoreI);
+		frag.add(PushD, STACK_POINTER);
+		frag.add(Exchange);
+		frag.add(StoreI);
+		
 		return frag;
 	}
 	

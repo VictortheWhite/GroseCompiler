@@ -35,8 +35,33 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	}
 	@Override
 	public void visitEnter(BlockNode node) {
+		if(node.getParent() instanceof FunctionDefinitionNode) {
+			CreateProcedureScope(node);
+		} else {
+			CreateSubScope(node);
+		}
+	}
+	//////////////////////////////////////////////////////////////////
+	// create scopes
+	// ParameterList
+	
+	@Override
+	public void visitEnter(ParameterListNode node) {
+		CreateTupleScope(node);
+	}
+	
+	// statements
+	@Override
+	public void visitEnter(ForStatementNode node) {
 		CreateSubScope(node);
 	}
+	
+	// function Definition
+		@Override
+	public void visitEnter(FunctionDefinitionNode node) {
+		CreateParameterScope(node);
+	}
+	
 	
 	//////////////////////////////////////////////////////////////////
 	// GlobalDefinition
@@ -53,11 +78,16 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		TupleTypeNode.getBinding().setImmutablity(true);
 		TupleTypeNode.getBinding().setShadow(false);
 	}
-	//
+	
+	
 	@Override
 	public void visitLeave(FunctionDefinitionNode node) {
 		IdentifierNode funcName = (IdentifierNode) node.child(0);
+		ParseNode returnTuple = node.child(2);
 		Type type = new TupleType(funcName.getToken().getLexeme());
+		
+		funcName.setType(type);
+		returnTuple.setType(type);
 		addFunctionBinding(funcName, type);
 		
 		funcName.getBinding().setImmutablity(true);
@@ -65,19 +95,6 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	}
 	
 	
-	// ParameterList
-	
-	@Override
-	public void visitEnter(ParameterListNode node) {
-		CreateTupleScope(node);
-	}
-	
-	//////////////////////////////////////////////////////////////////
-	// create Scopes for statements
-	@Override
-	public void visitEnter(ForStatementNode node) {
-		CreateSubScope(node);
-	}
 		
 	//////////////////////////////////////////////////////////////////
 	// scoping methods for scoping
@@ -90,6 +107,16 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 	
 	private void CreateTupleScope(ParseNode node) {
 		Scope scope = Scope.createTupleScope();
+		node.setScope(scope);
+	}
+	
+	private void CreateParameterScope(ParseNode node) {
+		Scope scope = Scope.createParameterScope();
+		node.setScope(scope);
+	}
+	
+	private void CreateProcedureScope(ParseNode node) {
+		Scope scope = Scope.createProcedureScope();
 		node.setScope(scope);
 	}
 	

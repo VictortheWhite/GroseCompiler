@@ -16,6 +16,32 @@ public class FunctionReturnNode extends ParseNode {
 		super(node);
 	}
 	
+	////////////////////////////////////////////////////////////
+	// attributes
+	
+	public boolean isLeagalReturn() {			// whether it is inside a loop
+		return findFunctionDefNode() != null;
+	}
+	
+	public String getJumpLabel() {
+		ParseNode LoopNode = findFunctionDefNode();
+		
+		
+		assert false;
+		return "";
+	}
+	
+	private ParseNode findFunctionDefNode() {
+		ParseNode funcDefNode = null;
+		for(ParseNode current: pathToRoot()) {
+			if(current instanceof FunctionDefinitionNode) {
+				funcDefNode = current;
+				break;
+			}
+		}
+		return funcDefNode;
+	}
+	
 	
 	///////////////////////////////////////////////////////////
 	// accept 

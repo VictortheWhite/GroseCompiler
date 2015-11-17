@@ -3,6 +3,7 @@ package semanticAnalyzer.signatures;
 import java.util.List;
 
 import semanticAnalyzer.types.PrimitiveType;
+import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
@@ -31,6 +32,21 @@ public class FunctionSignature {
 		}
 	}
 	
+	//////////////////////////////////////////////////////////////
+	// eliminate trivial tuple
+	public void eliminateTrivialTuple() {
+		for(int i = 0; i< paramTypes.length; i++) {
+			if(paramTypes[i] instanceof TupleType) {
+				if(((TupleType)paramTypes[i]).isTrivial())
+					paramTypes[i] = ((TupleType)paramTypes[i]).getTirvialEquvalenceType();
+			}
+		}
+		if(resultType instanceof TupleType) {
+			if(((TupleType)resultType).isTrivial())
+				resultType = ((TupleType)resultType).getTirvialEquvalenceType();
+		}
+		
+	}
 	
 	///////////////////////////////////////////////////////////////
 	// accessors

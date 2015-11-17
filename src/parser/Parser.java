@@ -254,6 +254,9 @@ public class Parser {
 		if(startsBreakContinue(nowReading)) {
 			return parseBreakContinue();
 		}
+		if(startsReturnStatement(nowReading)) {
+			return parseReturnStatement();
+		}
 		if(startsBlock(nowReading)) {
 			return parseBlock();
 		}
@@ -268,7 +271,8 @@ public class Parser {
 			   startsWhileStatement(token) ||
 			   startsForStatement(token) ||
 			   startsBlock(token) ||
-			   startsBreakContinue(token);
+			   startsBreakContinue(token) ||
+			   startsReturnStatement(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -539,6 +543,22 @@ public class Parser {
 		return token.isLextant(Keyword.CONTINUE, Keyword.BREAK);
 	}
 	
+	// return stmt
+	private ParseNode parseReturnStatement() {
+		if(!startsReturnStatement(nowReading)) {
+			return syntaxErrorNode("return statement");
+		}
+		Token returnToken = nowReading;
+		readToken();
+		expect(Punctuator.TERMINATOR);
+		return new FunctionReturnNode(returnToken);
+		
+	}
+	
+	private boolean startsReturnStatement(Token token) {
+		return token.isLextant(Keyword.RETURN);
+	}
+	
 	///////////////////////////////////////////////////////////
 	// expressions
 	// expr  -> expr0or
@@ -555,6 +575,7 @@ public class Parser {
 	//			[exprList]
 	//			fresh[type](expr)
 	//			length
+	//			functionName(epxrList)
 	// literal -> intNumber | floatingNumber | identifier | booleanConstant | characterConstant | stringConstant
 
 	// expr  -> expr0
@@ -799,13 +820,13 @@ public class Parser {
 	//			length 
 	//			populated_Array 
 	//			fresh[type](expr)
+	//			functionName(exprList)
 	private ParseNode parseExpression4() {
 		if(!startsExpression4(nowReading)) {
 			return syntaxErrorNode("expression<4>");
 		}
-		if(startsLiteral(nowReading))
-			return parseLiteral();
-		else if(startsParenthesis(nowReading))
+		
+		if(startsParenthesis(nowReading))
 			return parseParenthesis();
 		else if(startsPopulatedArray(nowReading)) 
 			return parsePopulatedArray();
@@ -813,6 +834,19 @@ public class Parser {
 			return parseFreshArray();
 		else if(startsLengthOperation(nowReading))
 			return parseLength();
+		else if(startsLiteral(nowReading)) {
+			ParseNode result = parseLiteral();
+			if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
+				Token functionInvocationToken = previouslyRead;
+				Token exprListToken = nowReading;
+				readToken();
+				ParseNode exprList = parseExpressionList(new ExpressionListNode(exprListToken));
+				expect(Punctuator.CLOSE_PARENTHESIS);
+				result = FunctionInvocationNode.withChildren(functionInvocationToken, result, exprList);
+			}
+			
+			return result;
+		}
 		
 		return syntaxErrorNode("expression<4>");
 	}
@@ -941,7 +975,7 @@ public class Parser {
 		return token.isLextant(Punctuator.BAR);
 	}
 	
-	// literal -> number | identifier | booleanConstant
+	// literal -> number | identifier | booleanConstant | stringConstant | CharacterConstant
 	private ParseNode parseLiteral() {
 		if(!startsLiteral(nowReading)) {
 			return syntaxErrorNode("literal");
@@ -953,9 +987,6 @@ public class Parser {
 		if(startsFloatingNumber(nowReading)) {
 			return parseFloatingNumber();
 		}
-		/*if(startsIntNumber(nowReading)) {
-			return parseFloatingNumber();
-		}*/
 		if(startsIdentifier(nowReading)) {
 			return parseIdentifier();
 		}

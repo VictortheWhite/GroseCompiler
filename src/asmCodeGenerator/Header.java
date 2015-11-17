@@ -91,7 +91,7 @@ public class Header {
 		code.add(ASMOpcode.StoreI);							// [...adr]
 	}
  	
-	public void addHeader(ASMCodeFragment code, FreshArrayNode node, TupleType tupleType) {
+	public void addTupleHeader(ASMCodeFragment code, TupleType tupleType) {
 		// [...adr]
 		code.add(ASMOpcode.Duplicate);	// [...adr adr]
 		code.add(ASMOpcode.PushI, tupleType.getTypeId());

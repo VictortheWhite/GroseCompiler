@@ -14,7 +14,14 @@ public class ParameterListNode extends ParseNode {
 	}
 	
 	////////////////////////////////////////////////////////////
-	// no attributes
+	// attributes
+	public int getExprListSize() {
+		int size = 0;
+		for(ParseNode child : this.getChildren()) {
+			size += child.child(0).getType().getSize();
+		}
+		return size;
+	}
 
 	
 	///////////////////////////////////////////////////////////

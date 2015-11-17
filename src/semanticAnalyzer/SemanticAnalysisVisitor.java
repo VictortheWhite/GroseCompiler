@@ -18,6 +18,12 @@ import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
+import symbolTable.FunctionBinding;
+import symbolTable.MemoryAccessMethod;
+import symbolTable.MemoryAllocator;
+import symbolTable.MemoryLocation;
+import symbolTable.NegativeMemoryAllocator;
+import symbolTable.PositiveMemoryAllocator;
 import symbolTable.Scope;
 import tokens.LextantToken;
 import tokens.Token;
@@ -70,8 +76,71 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visitEnter(ParameterListNode node) {
 		enterScope(node);
 	}
+	@Override
 	public void visitLeave(ParameterListNode node) {
 		leaveScope(node);
+	}
+	
+	//////////////////////////////////////////////////////////////////////////
+	// function Definition
+	// Initialize parameterScope of function
+	@Override
+	public void visitEnter(FunctionDefinitionNode node) {
+		enterScope(node);
+		
+		ParseNode args = node.child(1);
+		Scope parameterScope = node.getScope();
+		
+		for(ParseNode current: args.getChildren()) {
+			IdentifierNode identifier = (IdentifierNode)current.child(1);
+			Type type = current.child(0).getType();
+			Binding binding = addParameterBinding(identifier, type, parameterScope);
+			binding.setImmutablity(true);
+			binding.setShadow(false);
+		}
+		
+		assert node.child(2).getType() instanceof TupleType;
+		TupleType returnType = (TupleType)node.child(2).getType();
+		
+		if(returnType.isTrivial()) {
+			// if return type is trivial
+			// just put it into the global symbol table
+			// and use it as variable
+			Type realType = returnType.getTirvialEquvalenceType();
+			String id = returnType.getBindings().get(0).getLexeme();
+			Binding returnVarBinding = parameterScope.createBinding(id, realType);
+			returnVarBinding.setImmutablity(false);
+			returnVarBinding.setShadow(false);
+			return;
+		}
+		
+		// for non-trivial return type
+		// put all tuple entries into the symbolTable
+		// using double-indirect-access-method
+		// then put the return variable
+		MemoryAllocator allocator = new PositiveMemoryAllocator(MemoryAccessMethod.DOUBLE_INDIRECT_ACCESS_BASE, MemoryLocation.FRAME_POINTER, 9);
+		for(Binding currentBinding : returnType.getBindings()) {
+			Type type = currentBinding.getType();
+			String id = currentBinding.getLexeme();
+					
+			Binding binding = parameterScope.createReturnVariableBinding(type, id, allocator.allocate(type.getSize()));
+			
+			binding.setImmutablity(false);
+			binding.setShadow(false);
+		}	
+		// put the real return variable into it
+		// make the name of it as keyword.RETURN, so that so one can ever use this variable
+		Binding returnVarBinding = parameterScope.createBinding("return", returnType);
+		returnVarBinding.setImmutablity(true);
+		returnVarBinding.setShadow(false);
+		// not real necessary though, for no one can use variable named "return"
+		
+	}
+	@Override
+	public void visitLeave(FunctionDefinitionNode node) {		
+		leaveScope(node);
+		System.out.println(node.getScope());
+
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
@@ -343,7 +412,36 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		
 		return childrenTypes;
 	}
+	
+	@Override
+	public void visitLeave(FunctionInvocationNode node) {
+		assert node.child(0) instanceof IdentifierNode;
+		IdentifierNode functionNode = (IdentifierNode) node.child(0);
+		ParseNode argList = node.child(1);
 		
+		if(!(functionNode.getBinding() instanceof FunctionBinding)) {
+			logError("No function "+node.getToken().getLexeme() +node.getToken().getLocation());
+		}
+		FunctionBinding funcBinding = (FunctionBinding)functionNode.getBinding();
+		FunctionSignature signature = funcBinding.getSignature();
+		
+		List<Type> exprTypesList = new ArrayList<Type>();
+		for(ParseNode current : argList.getChildren()) {
+			exprTypesList.add(current.getType());
+		}
+		
+		if(signature.accepts(exprTypesList)) {
+			node.setType(signature.resultType());
+		}
+		else {
+			typeCheckError(node, exprTypesList);
+			node.setType(PrimitiveType.ERROR);
+		}
+		
+		
+	}
+	
+	
 	// array indexing
 	@Override
 	public void visitLeave(ArrayIndexingNode node) {
@@ -445,6 +543,23 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		node.setType(PrimitiveType.NO_TYPE);
 	}
 	///////////////////////////////////////////////////////////////////////////
+	// break&continue
+	@Override
+	public void visit(BreakContinueStatementNode node) {
+		if(!node.isLeagal()) {
+			logError("Break or continue must be within a loop: " + node.getToken().getLocation()); 
+		}
+	}
+	
+	// return statement
+	@Override
+	public void visit(FunctionReturnNode node) {
+		if(!node.isLeagalReturn()) {
+			logError("Return must be within a func " + node.getToken().getLocation());
+		}
+	}
+	
+	///////////////////////////////////////////////////////////////////////////
 	// IdentifierNodes, with helper methods
 	@Override
 	public void visit(IdentifierNode node) {
@@ -496,6 +611,15 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		identifierNode.setBinding(binding);
 	}
 	
+	// for funcDefNode to add args and return vars to ParameterScope
+	private Binding addParameterBinding(IdentifierNode identifierNode, Type type, Scope scope) {
+		if(!identifierNode.canBeShadowed()) {
+			identifierNode.setBinding(Binding.nullInstance());
+		}
+		Binding binding = scope.createBinding(identifierNode, type);
+		identifierNode.setBinding(binding);
+		return binding;
+	}
 	///////////////////////////////////////////////////////////////////////////
 	// error logging/printing
 

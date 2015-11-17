@@ -135,6 +135,10 @@ public class TupleType implements Type{
 		return result;
 	}
 	
+	public List<Binding> getBindings() {
+		return new ArrayList<Binding>(this.symbolTable.values());
+	}
+	
 	public int getLength() {
 		return getParameterList().size();
 	}

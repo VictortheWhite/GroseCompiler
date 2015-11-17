@@ -17,6 +17,17 @@ public class FunctionInvocationNode extends ParseNode {
 	}
 	
 	
+	////////////////////////////////////////////////////////////
+	// convenience factory
+
+	public static FunctionInvocationNode withChildren(Token token, ParseNode funcName, ParseNode exprList) {
+		FunctionInvocationNode node = new FunctionInvocationNode(token);
+		node.appendChild(funcName);
+		node.appendChild(exprList);
+		return node;
+	}
+	
+	
 	///////////////////////////////////////////////////////////
 	// boilerplate for visitors
 			

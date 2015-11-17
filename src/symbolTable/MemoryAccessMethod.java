@@ -29,6 +29,15 @@ public enum MemoryAccessMethod {
 		}		
 	},
 	
+	DOUBLE_INDIRECT_ACCESS_BASE() {
+		@Override
+		protected void generateBaseAddress(ASMCodeFragment code, String baseAddress) {
+			code.add(PushD, baseAddress);
+			code.add(LoadI);	
+			code.add(LoadI);	// adr of return var
+		}
+	},
+	
 	// base address is not needed or added in code generation
 	// this allocator only generates offsets
 	GENERATE_OFFSET_ONLY() {

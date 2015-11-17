@@ -14,8 +14,16 @@ public class ExpressionListNode extends ParseNode {
 	}
 	
 	////////////////////////////////////////////////////////////
-	// no attributes
+	// attributes
 
+	public int getExprListSize() {
+		int size = 0;
+		for(ParseNode child : this.getChildren()) {
+			size += child.getType().getSize();
+		}
+		return size;
+	}
+	
 	
 	///////////////////////////////////////////////////////////
 	// boilerplate for visitors
