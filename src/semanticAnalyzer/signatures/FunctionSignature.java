@@ -2,7 +2,6 @@ package semanticAnalyzer.signatures;
 
 import java.util.List;
 
-import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.TupleType;
 import semanticAnalyzer.types.Type;

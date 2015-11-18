@@ -22,7 +22,6 @@ import symbolTable.FunctionBinding;
 import symbolTable.MemoryAccessMethod;
 import symbolTable.MemoryAllocator;
 import symbolTable.MemoryLocation;
-import symbolTable.NegativeMemoryAllocator;
 import symbolTable.PositiveMemoryAllocator;
 import symbolTable.Scope;
 import tokens.LextantToken;
@@ -611,6 +610,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode parent = node.getParent();
 		return (parent instanceof FunctionInvocationNode) && (node == parent.child(0)) 
 				|| (parent instanceof FunctionDefinitionNode) && (node == parent.child(0)) 
+				|| (parent instanceof TupleDefinitionNode) && (node == parent.child(0))
 				|| (parent instanceof TupleEntryNode) && (node == parent.child(0));
 	}
 	// finding binding of tuple Subelement

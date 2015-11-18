@@ -417,11 +417,14 @@ public class ASMCodeGenerator {
 		
 		private void printPrimitiveType(Type type) {
 			String format = printFormat(type);
+			String notPrintingLabel = labeller.newLabel("jump-print-null-pointer", "");
 
+			printNullIfNullPointer(type, notPrintingLabel);
 			convertToStringIfBoolean(type);
 			addAddressOffestIfString(type);
 			code.add(PushD, format);
 			code.add(Printf);
+			code.add(Label, notPrintingLabel);
 		}
 		
 		// print array
@@ -435,6 +438,8 @@ public class ASMCodeGenerator {
 			int subTypeSize = type.getSubTypeSize();
 			String startLoopLabel = labeller.newLabel("printing-array-loop-start", "");
 			String endLoopLabel = labeller.newLabelSameNumber("printing-array-loop-end", "");
+			String notPrintingLabel = labeller.newLabelSameNumber("jump-print-null-pointer", "");
+			printNullIfNullPointer(type, notPrintingLabel);
 			
 			code.add(PushI, 91);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
@@ -492,6 +497,8 @@ public class ASMCodeGenerator {
 			code.add(PushI, 93);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
 			code.add(Printf);
+			
+			code.add(Label, notPrintingLabel);
 		}
 		
 		// print tuple
@@ -503,6 +510,9 @@ public class ASMCodeGenerator {
 		}
 		private void printTuple(TupleType type) {
 			List<Type> subElementTypes = type.getParameterList();
+			String notPrintingLabel = labeller.newLabel("jump-print-null-pointer", "");
+
+			printNullIfNullPointer(type, notPrintingLabel);
 			
 			code.add(PushI, 40);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
@@ -547,6 +557,8 @@ public class ASMCodeGenerator {
 			code.add(PushI, 41);
 			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
 			code.add(Printf);							// print ')'
+			
+			code.add(Label, notPrintingLabel);
 		}
 		private void convertToStringIfBoolean(Type type) {
 			if(type != PrimitiveType.BOOLEAN) {
@@ -571,6 +583,27 @@ public class ASMCodeGenerator {
 			code.add(PushI, 13);
 			code.add(Add);
 		}
+		
+		private void printNullIfNullPointer(Type type, String notPrintingLabel) {
+			if((type instanceof PrimitiveType) && (type != PrimitiveType.STRING)) {
+				return;
+			}
+			String printNullLabel = labeller.newLabel("print-null-pointer", "");
+			String pointerNotNullLabel = labeller.newLabelSameNumber("pointer-not-null", "");
+			code.add(Duplicate);
+			code.add(JumpFalse, printNullLabel);
+			code.add(Jump, pointerNotNullLabel);
+			
+			code.add(Label, printNullLabel);
+			code.add(Pop);
+			code.add(PushD, RunTime.NULL_POINTER_STRING);
+			code.add(PushD, RunTime.STRING_PRINT_FORMAT);
+			code.add(Printf);
+			code.add(Jump, notPrintingLabel);
+			
+			code.add(Label, pointerNotNullLabel);
+		}
+		
 		private String printFormat(Type type) {		
 			assert type instanceof PrimitiveType;
 			switch((PrimitiveType)type) {
