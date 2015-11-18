@@ -99,12 +99,17 @@ public class TupleType implements Type{
 		boolean needToReallocate = false;
 		for(String tupleName : this.symbolTable.keySet()) {
 			Binding binding = this.symbolTable.lookup(tupleName);
+			/*
+			 * not needed since it is undefined
+			 * to have trivial tuple with array of a trivial tuple as the only field
 			if(binding.getType() instanceof ArrayType) {
 				((ArrayType)binding.getType()).eliminateTrivialTuple();
 			}
+			*/
 			if(!(binding.getType() instanceof TupleType)) {
 				continue;
 			}
+			
 			needToReallocate = true;
 			TupleType type = (TupleType)binding.getType();
 			if(type.isTrivial()) {
@@ -189,9 +194,12 @@ public class TupleType implements Type{
 				return ((TupleType)resultType).getTirvialEquvalenceType();
 			}
 		} 
+		/*
+		 * not needed since it is undefined
 		if(resultType instanceof ArrayType) {
 			((ArrayType)resultType).eliminateTrivialTuple();
 		}
+		*/
 		return resultType;
 	}
 

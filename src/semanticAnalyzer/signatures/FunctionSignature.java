@@ -47,18 +47,24 @@ public class FunctionSignature {
 				if(((TupleType)paramTypes[i]).isTrivial())
 					paramTypes[i] = ((TupleType)paramTypes[i]).getTirvialEquvalenceType();
 			}
+			/*
+			 * not needed since it is undefined
 			if(paramTypes[i] instanceof ArrayType) {
 				((ArrayType)paramTypes[i]).eliminateTrivialTuple();
 			}
+			*/
 		}
 		
 		if(resultType instanceof TupleType) {
 			if(((TupleType)resultType).isTrivial())
 				resultType = ((TupleType)resultType).getTirvialEquvalenceType();
 		}
+		/*
+		 * not needed since it is undefined
 		if(resultType instanceof ArrayType) {
 			((ArrayType)resultType).eliminateTrivialTuple();
 		}
+		*/
 		
 	}
 	

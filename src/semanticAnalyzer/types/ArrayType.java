@@ -25,7 +25,9 @@ public class ArrayType implements Type{
 			return otherType.equals(this);	
 	}
 	
-	//////////////////////////
+	////////////////////////////////////////////////////
+	// not needed to do so cause it is undefined
+	/*
 	public void eliminateTrivialTuple() {
 		if(subType instanceof ArrayType) {
 			((ArrayType)subType).eliminateTrivialTuple();
@@ -38,6 +40,7 @@ public class ArrayType implements Type{
 			return;
 		}
 	}
+	*/
 	
 	
 	public Type getSubType() {
