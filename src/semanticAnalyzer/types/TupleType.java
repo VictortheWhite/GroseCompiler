@@ -36,12 +36,19 @@ public class TupleType implements Type{
 			return false;
 		}
 		
+		if(this == otherType) {
+			return true;
+		}
+		
 		if(this.symbolTable == null || ((TupleType)otherType).symbolTable == null) {
 			// for path compression
 			return this == otherType;
 		}
 		
 		List<Type> otherTupleArgList = ((TupleType)otherType).getParameterList();
+		System.out.println(this.infoString());
+		System.out.println(((Type)otherType).infoString());
+		
 		return this.checkArugments(otherTupleArgList);
 	}
 	
@@ -67,7 +74,7 @@ public class TupleType implements Type{
 			return false;
 		}
 		
-		for(int i=0;i<arguments.size();i++) {
+		for(int i=0;i<arguments.size();i++) {		
 			if(!arguments.get(i).equals(TupleArgsBindings.get(i).getType())) {
 				return false;
 			}

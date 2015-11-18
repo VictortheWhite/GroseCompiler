@@ -220,12 +220,10 @@ public class ASMCodeGenerator {
 		public void visitLeave(MainBlockNode node) {
 			newVoidCode(node);
 			code.add(Label, RunTime.MAIN_PROGRAM_LABEL);
-			//Macros.printStack(code, "before main");
 			for(ParseNode child : node.getChildren()) {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
 			}
-			//Macros.printStack(code, "after main");
 
 		}
 		public void visitLeave(BlockNode node)	{
@@ -694,9 +692,7 @@ public class ASMCodeGenerator {
 		// function call
 		public void visitLeave(FunctionCallNode node) {
 			newVoidCode(node);
-			//Macros.printStack(code, "beforeCall");
 			code.append(removeValueCode(node.child(0)));
-			//Macros.printStack(code, "afterCall");
 
 			if(node.child(0).getType() != PrimitiveType.VOID) {
 				code.add(Pop);
@@ -1049,7 +1045,7 @@ public class ASMCodeGenerator {
 					code.add(JumpFNeg, falseLabel);
 					code.add(Jump, trueLabel);
 				}
-			} else if(childType == PrimitiveType.BOOLEAN || childType == PrimitiveType.STRING || childType instanceof ArrayType) {
+			} else if(childType == PrimitiveType.BOOLEAN || childType == PrimitiveType.STRING || childType instanceof ArrayType || childType instanceof TupleType) {
 				code.add(Subtract);
 				if(operator == Punctuator.EQUAL) {
 					code.add(JumpFalse, trueLabel);
@@ -1534,7 +1530,6 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			
-			//Macros.printStack(code, "beforeInvocation");
 
 			// push arguments onto frame stack
 			// decrement stack pointer accordingly
@@ -1589,7 +1584,6 @@ public class ASMCodeGenerator {
 			// Stack Pointer adjusted
 			// Call function
 			code.add(Call, JumpFunctionLabel);
-			//Macros.printStack(code, "afterInvocation");
 
 		}
 		
