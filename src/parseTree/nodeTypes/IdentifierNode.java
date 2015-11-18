@@ -49,6 +49,10 @@ public class IdentifierNode extends ParseNode {
 		String identifier = token.getLexeme();
 
 		for(ParseNode current : pathToRoot()) {
+			if(current instanceof ProgramNode) {
+				break;	// cannot loop up variable in global symbolTable
+			}
+			
 			if(current.containsBindingOf(identifier)) {
 				declarationScope = current.getScope();
 				return current.bindingOf(identifier);

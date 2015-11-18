@@ -582,6 +582,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			return;
 		}
 		
+		if(isFunctionOrTupleIdentifier(node)) {
+			Binding binding = findTupleOrFunctionBinding(node);
+			node.setType(binding.getType());
+			node.setBinding(binding);
+			return;
+		}
+		
 		if(!isBeingDeclared(node)) {		
 			Binding binding = node.findVariableBinding();
 			node.setType(binding.getType());
@@ -600,6 +607,12 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		ParseNode parent = node.getParent();
 		return (parent instanceof TupleEntryNode) && (node == parent.child(1));
 	}
+	private boolean isFunctionOrTupleIdentifier(IdentifierNode node) {
+		ParseNode parent = node.getParent();
+		return (parent instanceof FunctionInvocationNode) && (node == parent.child(0)) 
+				|| (parent instanceof FunctionDefinitionNode) && (node == parent.child(0)) 
+				|| (parent instanceof TupleEntryNode) && (node == parent.child(0));
+	}
 	// finding binding of tuple Subelement
 	private Binding findSubelementBinding(IdentifierNode node) {
 		if(!(node.getParent().child(0).getType() instanceof TupleType)) {
@@ -609,7 +622,10 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		TupleType type = (TupleType)node.getParent().child(0).getType();
 		return type.lookup(node.getToken().getLexeme());
 	}
-	
+	// finding binding for tuple or function Identifier 
+	private Binding findTupleOrFunctionBinding(IdentifierNode node) {
+		return SemanticAnalyzer.getGlobalScope().getSymbolTable().lookup(node.getToken().getLexeme());
+	}
 	////////////////////////////////////////////////////////////////////////
 	private void addBinding(IdentifierNode identifierNode, Type type) {
 		if(!identifierNode.canBeShadowed()) {
