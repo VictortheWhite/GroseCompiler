@@ -266,11 +266,12 @@ public class LexicalAnalyzer extends ScannerImp implements Scanner {
 			if(nextChar.getCharacter() == '\"') {
 				return StringToken.make(ch.getLocation(), buffer.toString());
 			}
-			if(nextChar.isPrintableChar()) {
+			if(nextChar.getCharacter() == '\n') {
+				break;
+			} else {
 				buffer.append(nextChar.getCharacter());
 				nextChar = input.next();
-			} else 
-				break;
+			}
 
 		}	
 			issueLexicalError("Lexical Error: unclosed double quotes " + ch);
