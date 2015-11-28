@@ -240,14 +240,18 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override
 	public void visitLeave(ForControlPhraseNode node) {
 		// type check array
-		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT)) {
-			ParseNode arrayExprNode = node.child(1);
+		if(node.getToken().isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.PAIR)) {
+			ParseNode arrayExprNode = null;
+			if(node.getToken().isLextant(Keyword.PAIR)) {
+				arrayExprNode = node.child(2);
+			} else {
+				arrayExprNode = node.child(1);
+			}
 			
 			if(!(arrayExprNode.getType() instanceof ArrayType)) {
 				logError("Expected array type in for(index id of array)");
 				node.setType(PrimitiveType.ERROR);
 			} 
-		
 		}
 		
 		// check exprs in count has type of Int
@@ -262,7 +266,22 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		// create binding for itr
 		if(node.getToken().isLextant(Keyword.EVER)) {
 			return;
-		} else {
+		} else if(node.getToken().isLextant(Keyword.PAIR)) {
+			assert node.nChildren() == 3;
+			Type elementType = ((ArrayType)node.child(2).getType()).getSubType();
+			IdentifierNode itrNode = (IdentifierNode)node.child(0);
+			IdentifierNode eleNode = (IdentifierNode)node.child(1);
+			
+			// add binding to itrNode
+			addBinding(itrNode, PrimitiveType.INTEGER);
+			itrNode.getBinding().setImmutablity(true);
+			itrNode.getBinding().setShadow(false);
+			// add binding to eleNode
+			addBinding(eleNode, elementType);
+			eleNode.getBinding().setImmutablity(true);
+			eleNode.getBinding().setShadow(false);
+			
+		} else { // index, element and count
 			assert node.nChildren() ==2 || node.nChildren() == 3;
 			
 			Type itrType = null;
@@ -600,6 +619,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		return (parent instanceof DeclarationNode) && (node == parent.child(0)) 
 				||(parent instanceof ForStatementNode) && (node == parent.child(0))
 				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0))
+				||(parent instanceof ForControlPhraseNode) && (node == parent.child(1))
 				||(parent instanceof ParameterSpecificationNode);
 	}
 	private boolean isTupleSubElement(IdentifierNode node) {

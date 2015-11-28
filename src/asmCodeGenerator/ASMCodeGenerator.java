@@ -817,7 +817,6 @@ public class ASMCodeGenerator {
 				code.add(Exchange);
 				code.add(Duplicate);		// [...n arrayStart arrayStart]
 				code.add(PushD, elementAdrPtr);
-				//code.add(LoadI);
 				code.add(LoadI);			// [...n arrayStart arrayStart eleAdr]
 				code.add(Exchange);			// [...n arrayStart eleAdr arrayStart]
 				code.add(PushD, itrAdr);
@@ -845,12 +844,85 @@ public class ASMCodeGenerator {
 				code.add(Pop);
 				code.add(Pop);
 				
+			} else if(forCtlNode.getToken().isLextant(Keyword.PAIR)) {
+				String itrAdrPtr = labeller.newLabel("$for-loop-itr-pointer", "");
+				String eleAdrPtr = labeller.newLabelSameNumber("$for-loop-ele-pointer", "");
+				
+				Type subTypeOfArray = ((ArrayType)forCtlNode.child(2).getType()).getSubType();
+				ASMOpcode loadElementOpcode = LoadArrayOpcode(subTypeOfArray);
+				ASMOpcode storeElementOpcode = opcodeForStore(subTypeOfArray);
+				
+				ASMCodeFragment itrAdr = removeAddressCode(forCtlNode.child(0));
+				ASMCodeFragment eleAdr = removeAddressCode(forCtlNode.child(1));
+				ASMCodeFragment arrayExpr = removeValueCode(forCtlNode.child(2));
+				
+				// itrAdrPtrs
+				Macros.declareI(code, itrAdrPtr);
+				Macros.declareI(code, eleAdrPtr);
+				
+				// store itrAdrs
+				code.append(itrAdr);
+				Macros.storeITo(code, itrAdrPtr);
+				code.append(eleAdr);
+				Macros.storeITo(code, eleAdrPtr);
+				
+				// initialize itr
+				Macros.loadIFrom(code, itrAdrPtr);	//[...itrAdr]
+				code.add(PushI, 0);
+				code.add(StoreI);
+				
+				// put arrayExpr on stack
+				code.append(arrayExpr);
+				code.add(Duplicate);
+				// load array length
+				Macros.readIOffset(code, 13);		// [...arr n]
+				
+				// array start
+				code.add(Label, startLoopLabel);
+				// if itr == n, jump
+				code.add(Duplicate);				// [...arr n n]
+				Macros.loadIFrom(code, itrAdrPtr);	
+				code.add(LoadI);					// [...arr n n itr]
+				code.add(Subtract);
+				code.add(JumpFalse, endLoopLabel);	// [...arr n]
+				// load element
+				code.add(Exchange);					// [...n arr];
+				code.add(Duplicate);
+				code.add(PushI, subTypeOfArray.getSize());
+		        Macros.loadIFrom(code, itrAdrPtr);
+		        code.add(LoadI);					// [...n arr arr size itr]
+		        code.add(Multiply);
+		        code.add(PushI, 17);
+		        code.add(Add);						// [...n arr arr offset]
+		        code.add(Add);
+		        code.add(loadElementOpcode);		// [...n arr ele]
+		        Macros.loadIFrom(code, eleAdrPtr);	// [...n arra ele eleAdr]
+		        code.add(Exchange);
+		        code.add(storeElementOpcode);
+		        // user block
+		        code.append(block);
+		        code.add(Label, continueLoopLabel);
+		        
+		        // itr++
+		        Macros.loadIFrom(code, itrAdrPtr);
+		        code.add(Duplicate);
+		        code.add(LoadI);
+		        code.add(PushI, 1);
+		        code.add(Add);
+		        code.add(StoreI);
+		        // exchange stack
+		        code.add(Exchange);					// [...n arr] => [...arr n]
+				// jump start
+		        code.add(Jump, startLoopLabel);
+				code.add(Label, endLoopLabel);
+				code.add(Pop);
+				code.add(Pop);
+				
 			} else if(forCtlNode.getToken().isLextant(Keyword.INDEX)) {
 				String itrAdrPtr = labeller.newLabel("$for-loop-itr-pointer", "");
 				ASMCodeFragment itrAdr = removeAddressCode(forCtlNode.child(0));
 				ASMCodeFragment arrayExpr = removeValueCode(forCtlNode.child(1));
-
-				
+		
 				code.add(DLabel, itrAdrPtr);
 				code.add(DataI, 0);
 			
@@ -885,6 +957,7 @@ public class ASMCodeGenerator {
 				code.add(Jump, startLoopLabel);
 				code.add(Label, endLoopLabel);
 				code.add(Pop);
+				
 			} else if(forCtlNode.getToken().isLextant(Keyword.COUNT)) {								
 				ASMCodeFragment itrAdr = removeAddressCode(forCtlNode.child(0));
 				ASMCodeFragment lowerBound = null;

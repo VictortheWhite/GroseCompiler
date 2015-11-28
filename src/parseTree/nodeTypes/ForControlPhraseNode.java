@@ -12,7 +12,7 @@ public class ForControlPhraseNode extends ParseNode {
 	
 	public ForControlPhraseNode(Token token) {
 		super(token);
-		assert(token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT));
+		assert(token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT, Keyword.PAIR));
 	}
 
 	public ForControlPhraseNode(ParseNode node) {

@@ -28,6 +28,7 @@ public enum Keyword implements Lextant {
 	FOR("for"),
 	INDEX("index"),
 	ELEMENT("element"),
+	PAIR("pair"),
 	OF("of"),
 	EVER("ever"),
 	COUNT("count"),

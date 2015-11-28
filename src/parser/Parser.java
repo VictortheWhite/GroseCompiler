@@ -473,6 +473,18 @@ public class Parser {
 			result.appendChild(itr);
 			result.appendChild(array);
 		}
+		if(nowReading.isLextant(Keyword.PAIR)) {
+			readToken();
+			ParseNode itr = parseIdentifier();
+			expect(Punctuator.SEPARATOR);
+			ParseNode ele = parseIdentifier();
+			expect(Keyword.OF);
+			ParseNode arr = parseExpression();
+			
+			result.appendChild(itr);
+			result.appendChild(ele);
+			result.appendChild(arr);
+		}
 		if(nowReading.isLextant(Keyword.COUNT)){
 			readToken();
 			ParseNode expr1 = parseExpression2();
@@ -527,7 +539,7 @@ public class Parser {
 	}
 	
 	private boolean startsForControlPhrase(Token token) {
-		return token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT);
+		return token.isLextant(Keyword.INDEX, Keyword.ELEMENT, Keyword.EVER, Keyword.COUNT, Keyword.PAIR);
 	}
 	
 	// break and continue stmt
