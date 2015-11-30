@@ -60,6 +60,8 @@ public interface ParseNodeVisitor {
 	void visitEnter(ArrayIndexingNode node);
 	void visitLeave(ArrayIndexingNode node);
 
+	void visitEnter(ArrayConcatenationNode node);
+	void visitLeave(ArrayConcatenationNode node);
 	
 	void visitEnter(TupleDefinitionNode node);
 	void visitLeave(TupleDefinitionNode node);
@@ -221,6 +223,12 @@ public interface ParseNodeVisitor {
 			defaultVisitEnter(node);
 		}
 		public void visitLeave(ArrayIndexingNode node) {
+			defaultVisitLeave(node);
+		}
+		public void visitEnter(ArrayConcatenationNode node) {
+			defaultVisitEnter(node);
+		}
+		public void visitLeave(ArrayConcatenationNode node) {
 			defaultVisitLeave(node);
 		}
 		public void visitEnter(TupleDefinitionNode node) {

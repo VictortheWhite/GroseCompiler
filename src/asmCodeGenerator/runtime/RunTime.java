@@ -1,6 +1,7 @@
  package asmCodeGenerator.runtime;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
+import asmCodeGenerator.Macros;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 public class RunTime {
 	public static final String EAT_LOCATION_ZERO      = "$eat-location-zero";		// helps us distinguish null pointers from real ones.
@@ -23,9 +24,12 @@ public class RunTime {
 	
 	public static final String STRING_CONCA_ARG1	  = "$string-concatenation-arg1";
 	public static final String STRING_CONCA_ARG2	  = "$string-concatenation-arg2";
+	public static final String ARRAY_CONCA_ARG1		  = "$array-concatenation-arg1";
+	public static final String ARRAY_CONCA_ARG2		  = "$array-concatenation-arg2";
 	public static final String ARRAY_COPY_ARG		  = "$array-copy-arg";
 	public static final String TUPLE_COPY_ARG		  = "$tuple-copy-arg";
 	public static final String STRING_CONCATENATION   = "$$string-concatenation-start";
+	public static final String ARRAY_CONCATENATION	  = "$$array-concatenation-start";
 	public static final String ARRAY_COPY			  = "$$array-copy-start";
 	public static final String TUPLE_COPY			  = "$$tuple-copy-start";
 	
@@ -43,6 +47,7 @@ public class RunTime {
 		result.append(stringsForPrintf());
 		result.append(runtimeErrors());
 		result.append(stringConcatenationSubRoutine());
+		result.append(arrayConcatenationSubRoutine());
 		result.append(arrayCopySubRoutine());
 		result.append(tupleCopySubRoutine());
 		result.add(DLabel, USABLE_MEMORY_START);
@@ -239,6 +244,166 @@ public class RunTime {
 		frag.add(StoreC); 							// [...R C]
 		frag.add(Exchange); 						// [...C R]
 		frag.add(Return);							// popPC
+		return frag;
+	}
+	
+	private ASMCodeFragment arrayConcatenationSubRoutine() {
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VALUE);
+		String copy_arg1_loop_start = "array-concatenation-copy-arg1-loop-start";
+		String copy_arg1_loop_end = "array-coancatenation-copy-arg1-loop-end";
+		String copy_arg2_loop_start = "array-concatenation-copy-arg2-loop-start";
+		String copy_arg2_loop_end = "array-concatenation-copy-arg2-loop-end";
+		
+		
+		Macros.declareI(frag, ARRAY_CONCA_ARG1);
+		Macros.declareI(frag, ARRAY_CONCA_ARG2);
+		
+		frag.add(Label, ARRAY_CONCATENATION);
+
+		// calculate size
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 13);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);	
+		Macros.readIOffset(frag, 9);
+		frag.add(Multiply);								// [...size1]
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		Macros.readIOffset(frag, 13);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		Macros.readIOffset(frag, 9);
+		frag.add(Multiply);								// [...size1 size2]
+		frag.add(Add);									
+		frag.add(PushI, 17);
+		frag.add(Add);									// [...size]
+		
+		// allocate memory
+		frag.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);	// [...adr]
+
+		// initialize header ------------------------------------------------
+		frag.add(Duplicate);							// [...adr adr*]
+		// type identifier
+		frag.add(Duplicate);							// [...adr adr* adr*]
+		frag.add(PushI, 9);
+		frag.add(StoreI);								// [...adr adr*]
+		frag.add(PushI, 4);								// adr*+4
+		frag.add(Add);									// [...adr adr*]
+		/*
+		 * add status code to array record
+		 * immutablity set to 0
+		 * read subtype-is-reference from arg, add to record
+		 * do-not-dispose set to 0 
+		 * thus, just read subtype-is-reference bit and multiply by 2
+		 */
+		frag.add(Duplicate);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 4);
+		frag.add(PushI, 2);
+		frag.add(BTAnd);								// [...adr adr* adr* statusCode]
+		frag.add(StoreI);								
+		frag.add(PushI, 4);
+		frag.add(Add);									// [...adr adr*] adr*+=4
+		// reference count
+		frag.add(Duplicate);
+		frag.add(PushI, 0);
+		frag.add(StoreC);
+		frag.add(PushI, 1);
+		frag.add(Add);
+		// subType size
+		frag.add(Duplicate);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 9);					// [...adr adr* adr* subTypeSize]
+		frag.add(StoreI);
+		frag.add(PushI, 4);
+		frag.add(Add);
+		// length
+		frag.add(Duplicate);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 13);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		Macros.readIOffset(frag, 13);
+		frag.add(Add);									// [...adr adr* adr* length]
+		frag.add(StoreI);
+		frag.add(PushI, 4);
+		frag.add(Add);									// [...adr adr*]
+			
+		// append arg1 -------------------------------------------------------------------
+		// read size(arg1)
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 9);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		Macros.readIOffset(frag, 13);
+		frag.add(Multiply);								// [...adr adr* n]
+		// move arg1 to data-start
+		frag.add(PushI, 17);
+		Macros.addITo(frag, ARRAY_CONCA_ARG1);			
+		// loop-start
+		frag.add(Label, copy_arg1_loop_start); 
+		// if n == 0, end looping
+		frag.add(Duplicate);
+		frag.add(JumpFalse, copy_arg1_loop_end);
+		// copy byte by byte
+		frag.add(Exchange);
+		frag.add(Duplicate);							// [...adr n adr* adr*]
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG1);
+		frag.add(LoadC);								// [...adr n adr* adr* c]
+		frag.add(StoreC);
+		// increment adr*
+		frag.add(PushI, 1);
+		frag.add(Add);									// [...adr n adr*]
+		// increment arg1*
+		Macros.incrementInteger(frag, ARRAY_CONCA_ARG1);
+		// decrement n
+		frag.add(Exchange);
+		frag.add(PushI, -1);
+		frag.add(Add);									// [...adr adr* n]
+		// jump to start
+		frag.add(Jump, copy_arg1_loop_start);
+		// loop-end
+		frag.add(Label, copy_arg1_loop_end);
+		// pop n
+		frag.add(Pop);
+		
+		// append arg2 -------------------------------------------------------------------
+		// read size(arg2)
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		Macros.readIOffset(frag, 9);
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		Macros.readIOffset(frag, 13);
+		frag.add(Multiply);								// [...adr adr* n]
+		// move arg1 to data-start
+		frag.add(PushI, 17);
+		Macros.addITo(frag, ARRAY_CONCA_ARG2);
+		// loop-start
+		frag.add(Label, copy_arg2_loop_start);
+		// if n == 0, end looping
+		frag.add(Duplicate);
+		frag.add(JumpFalse, copy_arg2_loop_end);
+		// copy byte by byte
+		frag.add(Exchange);
+		frag.add(Duplicate);							// [...adr n adr* adr*]
+		Macros.loadIFrom(frag, ARRAY_CONCA_ARG2);
+		frag.add(LoadC);								// [...adr n adr* adr* c]
+		frag.add(StoreC);
+		// increment adr*
+		frag.add(PushI, 1);
+		frag.add(Add);									// [...adr n adr*]
+		// increment arg2*
+		Macros.incrementInteger(frag, ARRAY_CONCA_ARG2);
+		// decrement n
+		frag.add(Exchange);
+		frag.add(PushI, -1);
+		frag.add(Add);									// [...adr adr* n]
+		// jump to start
+		frag.add(Jump, copy_arg2_loop_start);
+		// loop-end
+		frag.add(Label, copy_arg2_loop_end);
+		// pop n
+		frag.add(Pop);		
+		
+		// pop adr*
+		frag.add(Pop);									// [...adr]
+		// exchange and return
+		frag.add(Exchange);
+		frag.add(Return);
 		return frag;
 	}
 	

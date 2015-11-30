@@ -13,6 +13,7 @@ import lexicalAnalyzer.Keyword;
 import lexicalAnalyzer.Lextant;
 import lexicalAnalyzer.Punctuator;
 import parseTree.*;
+import parseTree.nodeTypes.ArrayConcatenationNode;
 import parseTree.nodeTypes.ArrayIndexingNode;
 import parseTree.nodeTypes.BinaryOperatorNode;
 import parseTree.nodeTypes.BlockNode;
@@ -1481,6 +1482,25 @@ public class ASMCodeGenerator {
 			
 		}
 		
+		// expression -----------Array Concatenation
+		public void visitLeave(ArrayConcatenationNode node) {
+			ASMCodeFragment firstArray = removeValueCode(node.child(0));
+			
+			newValueCode(node);
+			code.append(firstArray);
+			for(int i = 1; i < node.nChildren(); i++) {
+				// store arg1
+				// [...arg1]
+				Macros.storeITo(code, RunTime.ARRAY_CONCA_ARG1);
+				// store arg2
+				code.append(removeValueCode(node.child(i)));
+				Macros.storeITo(code, RunTime.ARRAY_CONCA_ARG2);
+								
+				// call array-concatenation-subroutine
+				code.add(Call, RunTime.ARRAY_CONCATENATION);
+			}
+		}
+		
 		// expression -----------Empty Array Creation
 		public void visitLeave(FreshArrayNode node) {
 			if(node.getType() instanceof ArrayType) {
@@ -1491,7 +1511,7 @@ public class ASMCodeGenerator {
 			}
 													// [...adr]
 		}
-	
+		
 		private void addFreshArray(FreshArrayNode node) {
 			// logic is comparatively complicated, so putting everything including header here
 			ArrayType nodeType = (ArrayType)node.getType();
@@ -1659,8 +1679,7 @@ public class ASMCodeGenerator {
 			code.add(Call, JumpFunctionLabel);
 
 		}
-		
-		
+			
 		///////////////////////////////////////////////////////////////////////////
 		// leaf nodes (ErrorNode not necessary)
 		public void visit(BooleanConstantNode node) {

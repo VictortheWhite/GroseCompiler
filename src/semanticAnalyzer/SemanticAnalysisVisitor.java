@@ -423,6 +423,32 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		node.setType(nodeType);
 	}
 	
+	// array concatenation
+	@Override
+	public void visitLeave(ArrayConcatenationNode node) {
+		if(node.nChildren() < 2) {
+			logError("Array Concatenation needs at least 2 args" + node.getToken().getLocation());
+			node.setType(PrimitiveType.ERROR);
+			return;
+		}
+		List<Type> childTypes = collectChildrenTypes(node);
+		Type nodeType = childTypes.get(0);
+		if(!(nodeType instanceof ArrayType)) {
+			logError("arrayType needed for array conca"
+					+ node.getToken().getLocation());
+		}
+		for(Type childType : childTypes) {
+			if(!childType.equals(nodeType)) {
+				logError("array conca type cheking error: " + childTypes 
+						+ node.getToken().getLocation());
+				node.setType(PrimitiveType.ERROR);
+				return;
+			}
+		}
+		
+		node.setType(nodeType);
+	}
+	
 	private List<Type> collectChildrenTypes(ParseNode node) {
 		List<Type> childrenTypes = new ArrayList<Type>();
 		for(ParseNode child : node.getChildren()) {
@@ -431,6 +457,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		
 		return childrenTypes;
 	}
+	
 	
 	@Override
 	public void visitLeave(FunctionInvocationNode node) {

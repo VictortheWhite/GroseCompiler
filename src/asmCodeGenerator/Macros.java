@@ -131,5 +131,13 @@ public class Macros {
 		printString(code, "\n");
 	}
 	
+	public static void printPointer(ASMCodeFragment code, String location, String prefix) {
+		code.add(PushD, location);
+		code.add(LoadI);
+		printString(code, prefix + ":");
+		printStackTop(code, "%d");
+		code.add(Pop);
+		printString(code, "\n");
+	}
 	
 }

@@ -162,7 +162,7 @@ public class Scope {
 	}
 	private Binding allocateNewTupleBinding(Type type, TextLocation textLocation, String lexeme) {
 		MemoryLocation memoryLocation = allocator.allocate(0);
-		return new Binding(type, textLocation, memoryLocation, lexeme);
+		return new TupleBinding(type, textLocation, memoryLocation, lexeme);
 	}
 	
 	

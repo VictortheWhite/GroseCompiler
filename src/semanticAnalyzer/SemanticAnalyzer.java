@@ -21,7 +21,7 @@ public class SemanticAnalyzer {
 		this.ASTree = ASTree;
 	}
 	
-	public ParseNode analyze() {
+	public ParseNode analyze() {		
 		ASTree.accept(new SemanticAnalysisTupleCollectingVisitor());
 		ASTree.accept(new TupleInitializationAndFunctionSignatureVisitor());
 		ASTree.accept(new SemanticAnalysisVisitor());
@@ -47,7 +47,9 @@ public class SemanticAnalyzer {
 		globalScope = global;
 	}
 	
+	
 	public static Scope getGlobalScope() {
 		return globalScope;
 	}
+	
 }

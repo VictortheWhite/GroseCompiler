@@ -93,8 +93,6 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		funcName.getBinding().setImmutablity(true);
 		funcName.getBinding().setShadow(false);
 	}
-	
-	
 		
 	//////////////////////////////////////////////////////////////////
 	// scoping methods for scoping
@@ -142,4 +140,5 @@ public class SemanticAnalysisTupleCollectingVisitor extends ParseNodeVisitor.Def
 		Binding binding = SemanticAnalyzer.getGlobalScope().createTupleBinding(identifierNode, type);
 		identifierNode.setBinding(binding);
 	}
+	
 }

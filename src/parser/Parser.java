@@ -72,10 +72,14 @@ public class Parser {
 			return syntaxErrorNode("Global Definiton");
 		}
 		
-		if(startsTupleDefinition(nowReading))
+		if(startsTupleDefinition(nowReading)) {
 			return parseTupleDefinition();
+		}
 		if(startsFunctionDefinition(nowReading)) {
 			return parseFunctionDefinition();
+		}
+		if(startsDeclaration(nowReading)) {
+			return parseDeclaration();
 		}
 		
 		assert false : "bad token " + nowReading + " in parseGlobalDefinition()";
@@ -83,7 +87,7 @@ public class Parser {
 	}
 	
 	private boolean startsGlobalDefinition(Token token) {
-		return startsTupleDefinition(token) || startsFunctionDefinition(token);
+		return startsTupleDefinition(token) || startsFunctionDefinition(token) || startsDeclaration(token);
 	}
 	
 	// tupleDefinition
@@ -335,6 +339,15 @@ public class Parser {
 		if(!startsDeclaration(nowReading)) {
 			return syntaxErrorNode("declaration");
 		}
+		
+		boolean isStatic = false;
+		if(nowReading.isLextant(Keyword.STATIC)) {
+			isStatic = true;
+			readToken();
+		}
+		if(!nowReading.isLextant(Keyword.IMMUTABLE, Keyword.VARIABLE)) {
+			return syntaxErrorNode("declaration");
+		}
 		Token declarationToken = nowReading;
 		readToken();
 		
@@ -343,10 +356,10 @@ public class Parser {
 		ParseNode initializer = parseExpression();
 		expect(Punctuator.TERMINATOR);
 		
-		return DeclarationNode.withChildren(declarationToken, identifier, initializer);
+		return DeclarationNode.withChildren(declarationToken, identifier, initializer, isStatic);
 	}
 	private boolean startsDeclaration(Token token) {
-		return token.isLextant(Keyword.IMMUTABLE) || token.isLextant(Keyword.VARIABLE);
+		return token.isLextant(Keyword.IMMUTABLE, Keyword.VARIABLE, Keyword.STATIC);
 	}
 	
 	// reassignment -> let target := expression;
@@ -867,23 +880,22 @@ public class Parser {
 		}
 		
 		if(startsParenthesis(nowReading))
-			return parseParenthesis();
-		else if(startsPopulatedArray(nowReading)) 
-			return parsePopulatedArray();
+			return parseParenthesis();		
 		else if(startsFreshArray(nowReading))
 			return parseFreshArray();
 		else if(startsLengthOperation(nowReading))
 			return parseLength();
-		else if(startsLiteral(nowReading)) {
+		else if(startsLiteral(nowReading))
 			return parseLiteral();
-		}
+		else if(startsPopulatedArrayOrArrayConcatenation(nowReading)) 
+			return parsePopulatedArrayOrArrayConcatenation();
 		
 		return syntaxErrorNode("expression<4>");
 	}
 	private boolean startsExpression4(Token token) {
 		return startsLiteral(token) || startsParenthesis(token) 
-				|| startsLengthOperation(token) || startsPopulatedArray(token) 
-				|| startsFreshArray(token);
+				|| startsLengthOperation(token) || startsFreshArray(token)
+				|| startsPopulatedArrayOrArrayConcatenation(token) ;
 	}
 
 	// Parenthesis
@@ -900,17 +912,37 @@ public class Parser {
 		return token.isLextant(Punctuator.OPEN_PARENTHESIS);
 	}
 	// populated array creation
-	private ParseNode parsePopulatedArray() {
-		if(!startsPopulatedArray(nowReading)) {
+	private ParseNode parsePopulatedArrayOrArrayConcatenation() {
+		if(!startsPopulatedArrayOrArrayConcatenation(nowReading)) {
 			return syntaxErrorNode("populated array creation");
 		}
-		PopulatedArrayNode result = new PopulatedArrayNode(nowReading);
-		
+		Token openBracket = nowReading;
 		readToken();
-		result = (PopulatedArrayNode)parseExpressionList(result);
 		
-		expect(Punctuator.CLOSE_SQUARE_BRACKET);
-		return result;
+		if(!nowReading.isLextant(Punctuator.ADD)) {
+			// populated array creation
+			PopulatedArrayNode result = new PopulatedArrayNode(openBracket);
+			result = (PopulatedArrayNode)parseExpressionList(result);
+			expect(Punctuator.CLOSE_SQUARE_BRACKET);
+			return result;
+		}
+		else {
+			// array concatenation
+			ArrayConcatenationNode result = new ArrayConcatenationNode(openBracket);
+			readToken();
+			
+			ParseNode newExpr = parseExpressionUnaryOp();
+			result.appendChild(newExpr);
+			while(nowReading.isLextant(Punctuator.SEPARATOR)) {
+				readToken();
+				newExpr = parseExpressionUnaryOp();
+				result.appendChild(newExpr);
+			}
+			
+			expect(Punctuator.ADD);
+			expect(Punctuator.CLOSE_SQUARE_BRACKET);
+			return result;
+		}
 		
 		
 	}
@@ -931,7 +963,7 @@ public class Parser {
 		return node;
 	}
 	
-	private boolean startsPopulatedArray(Token token) {
+	private boolean startsPopulatedArrayOrArrayConcatenation(Token token) {
 		return token.isLextant(Punctuator.OPEN_SQUARE_BRACKET);
 	}
 	
