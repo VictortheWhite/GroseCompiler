@@ -258,7 +258,7 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		if(node.getToken().isLextant(Keyword.COUNT)) {
 			for(int i = 1; i< node.nChildren(); i++)
 				if(node.child(i).getType()!=PrimitiveType.INTEGER) {
-					logError("Expected integer type for count lower and upper bound");
+					logError("Expected integer type for count lower and upper bound"+node.getToken().getLocation());
 					node.setType(PrimitiveType.ERROR);
 				}
 		}
