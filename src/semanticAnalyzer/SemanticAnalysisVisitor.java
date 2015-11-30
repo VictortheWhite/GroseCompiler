@@ -666,7 +666,8 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		return (parent instanceof DeclarationNode) && (node == parent.child(0)) 
 				||(parent instanceof ForStatementNode) && (node == parent.child(0))
 				||(parent instanceof ForControlPhraseNode) && (node == parent.child(0))
-				||(parent instanceof ForControlPhraseNode) && (node == parent.child(1))
+				/* second identifier of pair for control*/
+				||(parent instanceof ForControlPhraseNode) && (node == parent.child(1)) && (parent.getToken().isLextant(Keyword.PAIR))
 				||(parent instanceof ParameterSpecificationNode);
 	}
 	private boolean isTupleSubElement(IdentifierNode node) {
