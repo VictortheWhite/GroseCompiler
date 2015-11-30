@@ -1353,6 +1353,15 @@ public class ASMCodeGenerator {
 			if(operator == Punctuator.BOOLEANCOMPLIMENT) {
 				visitBooleanComplimentNode(node, operator);
 			}
+			if(operator == Punctuator.AT) {
+				visitAddressOfNode(node, operator);
+			}
+			if(operator == Punctuator.SHARP) {
+				visitReferenceCountNode(node, operator);
+			}
+			if(operator == Punctuator.DOLLERSIGN) {
+				visitRecordNumberNode(node, operator);
+			}
 			if(operator == Keyword.COPY) {
 				if(node.getType() instanceof TupleType) 
 					visitTupleCopyNode(node, operator);
@@ -1400,6 +1409,7 @@ public class ASMCodeGenerator {
 		
 		private void visitTupleCopyNode(UnaryOperatorNode node, Lextant operator) {
 			assert node.getType() instanceof TupleType;
+			assert operator == Keyword.COPY;
 			ASMCodeFragment arg = removeValueCode(node.child(0));
 			TupleType type = (TupleType)node.getType();
 			
@@ -1413,6 +1423,32 @@ public class ASMCodeGenerator {
 			// [...n]
 			code.add(Call, RunTime.TUPLE_COPY);
 		}
+		
+		private void visitAddressOfNode(UnaryOperatorNode node, Lextant operator) {
+			assert operator == Punctuator.AT;
+			ASMCodeFragment targetAddress = removeAddressCode(node.child(0));
+			newValueCode(node);
+			code.append(targetAddress);
+		}
+		
+		private void visitReferenceCountNode(UnaryOperatorNode node, Lextant operator) {
+			assert operator == Punctuator.SHARP;
+			ASMCodeFragment expr = removeValueCode(node.child(0));
+			
+			newValueCode(node);
+			code.append(expr);
+			Macros.readCOffset(code, 8);
+		}
+
+		private void visitRecordNumberNode(UnaryOperatorNode node, Lextant operator) {
+			assert operator == Punctuator.DOLLERSIGN;
+			ASMCodeFragment expr = removeValueCode(node.child(0));
+			
+			newValueCode(node);
+			code.append(expr);
+			// do something
+		}
+		
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));

@@ -327,6 +327,19 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	public void visitLeave(UnaryOperatorNode node) {
 		assert node.nChildren()==1;
 		
+		// @target
+		if(node.getToken().isLextant(Punctuator.AT)) {
+			ParseNode child = node.child(0);
+			if(!isTargetNode(child)) {
+				logError("target required for @: " + node.getToken().getLocation());
+				node.setType(PrimitiveType.ERROR);
+				return;
+			}
+			node.setType(PrimitiveType.INTEGER);
+			return;
+		}
+		
+		// unary operators other than @
 		ParseNode SingleChild = node.child(0);
 		List<Type> childTypes = Arrays.asList(SingleChild.getType());
 		
@@ -341,6 +354,13 @@ class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 	}
+	
+	private boolean isTargetNode(ParseNode node) {
+		return (node instanceof IdentifierNode) 
+				|| (node instanceof ArrayIndexingNode)
+				|| (node instanceof TupleEntryNode);
+	}
+	
 	@Override
 	public void visitLeave(LengthOperatorNode node) {
 		assert node.nChildren()	==1;

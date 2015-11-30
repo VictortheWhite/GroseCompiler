@@ -161,6 +161,20 @@ public class FunctionSignatures extends ArrayList<FunctionSignature> {
 				new FunctionSignature(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN)
 			);
 		
+		// refcount
+		new FunctionSignatures(Punctuator.SHARP,
+				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
+				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER),
+				new FunctionSignature(1, TupleTypeVar, PrimitiveType.INTEGER)
+			);
+		
+		// record number
+		new FunctionSignatures(Punctuator.DOLLERSIGN,
+				new FunctionSignature(1, PrimitiveType.STRING, PrimitiveType.INTEGER),
+				new FunctionSignature(1, new ArrayType(TypeVar), PrimitiveType.INTEGER),
+				new FunctionSignature(1, TupleTypeVar, PrimitiveType.INTEGER)
+			);
+		
 		
 		// length
 		new FunctionSignatures(Punctuator.BAR,											

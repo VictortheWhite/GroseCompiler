@@ -796,12 +796,14 @@ public class Parser {
 		return startsExpressionUnaryOp(token);
 	}
 	// Unary operator
-	// exprUnaryOp -> [!|copy]* expr4 right-assoc
+	// exprUnaryOp -> [!|copy|@|#|$|]* expr4 right-assoc
 	//				  null type
 	private ParseNode parseExpressionUnaryOp() {
 		if(!startsExpressionUnaryOp(nowReading)) {
 			return syntaxErrorNode("expression UnaryOp");
 		}
+		
+		// null reference
 		if(nowReading.isLextant(Keyword.NULL)) {
 			Token nullToken = nowReading;
 			readToken();
@@ -833,7 +835,7 @@ public class Parser {
 		return isUnaryOperator(token) || startsExpressionArrayIndexingAndTupleEntry(token) || token.isLextant(Keyword.NULL);
 	}
 	private boolean isUnaryOperator(Token token) {
-		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY);
+		return token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY, Punctuator.SHARP, Punctuator.DOLLERSIGN, Punctuator.AT);
 	}
 	
 	// exprArrayIndexing -> expr4 [ [expr] | .identifier ]*

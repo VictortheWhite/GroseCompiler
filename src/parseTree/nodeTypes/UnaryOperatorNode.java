@@ -14,7 +14,7 @@ public class UnaryOperatorNode extends ParseNode {
 
 	public UnaryOperatorNode(Token token) {
 		super(token);
-		assert(token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY));
+		assert(token.isLextant(Punctuator.BOOLEANCOMPLIMENT, Keyword.COPY, Punctuator.AT, Punctuator.DOLLERSIGN, Punctuator.SHARP));
 	}
 
 	public UnaryOperatorNode(ParseNode node) {
