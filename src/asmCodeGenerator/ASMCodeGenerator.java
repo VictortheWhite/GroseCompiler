@@ -1702,7 +1702,7 @@ public class ASMCodeGenerator {
 					header.addTupleHeader(code, returnTupleType);
 				} else {
 					if(returnType == PrimitiveType.FLOATING) 
-						code.add(PushF, 0);
+						code.add(PushF, 0.0);
 					else
 						code.add(PushI, 0);
 				}
