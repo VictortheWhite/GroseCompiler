@@ -3,6 +3,7 @@ package asmCodeGenerator.runtime;
 import static asmCodeGenerator.Macros.*;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
+
 import asmCodeGenerator.Labeller;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 
@@ -19,12 +20,17 @@ public class MemoryManager {
 	public  static final String MEM_MANAGER_ALLOCATE =     "-mem-manager-allocate";
 	public  static final String MEM_MANAGER_DEALLOCATE =   "-mem-manager-deallocate";
 	private static final String MEM_MANAGER_REMOVE_BLOCK = "-mem-manager-remove-block";
+	public  static final String MEM_MANAGER_GET_ID       = "-mem-manager-get-id";
+	public  static final String MEM_MANAGER_DIAGNOSTICS  = "-mem-manager-diagnostics";
 	
 	// Main memory manager variables.
 	private static final String MEM_MANAGER_HEAP_START_PTR =   "$heap-start-ptr";
 	private static final String MEM_MANAGER_HEAP_END_PTR =     "$heap-after-ptr";
 	private static final String MEM_MANAGER_FIRST_FREE_BLOCK = "$heap-first-free";
 	private static final String MEM_MANAGER_HEAP =             "$heap-memory";
+	
+	//
+	private static final String MEM_MANAGER_NEXT_RECORDNUM = "$heap-next-record-num";
 	
 	// locals for MAKE_TAGS
 	private static final String MMGR_BLOCK_RETURN_ADDRESS = "$mmgr-tags-return";
@@ -67,10 +73,15 @@ public class MemoryManager {
 	private static final String MMGR_REMOVE_PROCESS_NEXT =		"-mmgr-remove-process-next";
 	private static final String MMGR_REMOVE_DONE = 				"-mmgr-remove-done";
 	
+	// locals and branch targets for DIAGNOSTICS
+	private static final String MMGR_DIAG_RETURN_ADDRESS =      "$mmgr-diag-return";;
+	
 	// variables used by a macro (method newBlock) but could be shared by all instances of the macro
 	// (although currently there is only one instance.)  allocated in initialization.
 	private static final String MMGR_NEWBLOCK_BLOCK = "$mmgr-newblock-block";
 	private static final String MMGR_NEWBLOCK_SIZE =  "$mmgr-newblock-size";
+	
+	private static String STRING_PRINT_FORMAT = "mmgr-stringPrintFormat";
 
 	// a tag is:
 	//		prev/next ptr:	4 bytes
@@ -81,11 +92,15 @@ public class MemoryManager {
 	private static final int TAG_POINTER_OFFSET = 0;
 	private static final int TAG_SIZE_OFFSET = 4;
 	private static final int TAG_AVAIL_OFFSET = 8;
+
+	// added after front tag of block but before userblock.
+	private static final int MMGR_RECORDNUM_SIZE_IN_BYTES = 4;
+	
 	
 	// the only tunable parameter.
 	private static final int MEM_MANAGER_WASTE_TOLERANCE = MMGR_TWICE_TAG_SIZE + 8;
 
-	
+	static Labeller labeller = new Labeller();
 
 	// this code should reside on the executable pathway before the application.
 	public static ASMCodeFragment codeForInitialization() {
@@ -95,6 +110,7 @@ public class MemoryManager {
 		declareI(frag, MEM_MANAGER_HEAP_START_PTR);	// declare variables
 		declareI(frag, MEM_MANAGER_HEAP_END_PTR);	
 		declareI(frag, MEM_MANAGER_FIRST_FREE_BLOCK);
+		declareI(frag, MEM_MANAGER_NEXT_RECORDNUM);
 		
 		declareI(frag, MMGR_NEWBLOCK_BLOCK);
 		declareI(frag, MMGR_NEWBLOCK_SIZE);
@@ -107,6 +123,8 @@ public class MemoryManager {
 		frag.add(PushI, 0);								// no blocks allocated.
 		storeITo(frag, MEM_MANAGER_FIRST_FREE_BLOCK);
 
+
+		
 		if(DEBUGGING) {
 			insertDebugMain(frag);
 		}
@@ -124,11 +142,15 @@ public class MemoryManager {
 		frag.append(subroutineAllocate());
 		frag.append(subroutineDeallocate());
 		frag.append(subroutineRemoveBlock());
+		frag.append(subroutineGetID());
+		frag.append(subroutineDiagnostics());
 		if(DEBUGGING) {
 			frag.append(subroutineDebugPrintBlock());
 			frag.append(subroutineDebugPrintFreeList());
 		}
 		
+		frag.add(DLabel, STRING_PRINT_FORMAT);
+		frag.add(DataS, "%s");
 		frag.add(DLabel, MEM_MANAGER_HEAP);	
 		
 		return frag;
@@ -227,12 +249,14 @@ public class MemoryManager {
 		storeITo(frag, MMGR_ALLOC_RETURN_ADDRESS);	// [... usableSize]
 		
 		if(DEBUGGING2) {
-			ptop(frag, "--allocate %d bytes\n");
+			printStackTop(frag, "--allocate %d bytes\n");
 		}
 
 		//convert user size to mmgr size and store
 		frag.add(PushI, MMGR_TWICE_TAG_SIZE);			// [... usableSize 2*tagsize]
 		frag.add(Add);									// [... size]
+		frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES); 	// [... size recordnumSize]
+		frag.add(Add);
 		storeITo(frag, MMGR_ALLOC_SIZE);				// [...]
 
 	
@@ -249,7 +273,7 @@ public class MemoryManager {
 		frag.add(Label, MMGR_ALLOC_TEST_BLOCK);
 			loadIFrom(frag, MMGR_ALLOC_CURRENT_BLOCK);		// [... block]
 			if(DEBUGGING2) {
-				ptop(frag, "--testing block %d\n");
+				printStackTop(frag, "--testing block %d\n");
 			}
 			readTagSize(frag);								// [... block.size]
 			loadIFrom(frag, MMGR_ALLOC_SIZE);				// [... block.size allocSize]
@@ -332,7 +356,7 @@ public class MemoryManager {
 		
 		frag.add(Label, MMGR_ALLOC_NO_BLOCK_WORKS);
 			if(DEBUGGING2) {
-				pstring(frag, "--NO BLOCK WORKS\n");
+				debugPrintString(frag, "--NO BLOCK WORKS\n");
 			}
 			loadIFrom(frag, MMGR_ALLOC_SIZE);			// [... size]
 //			debugPrintI(frag, "alloc ", MEM_MANAGER_HEAP_END_PTR);
@@ -344,8 +368,16 @@ public class MemoryManager {
 		frag.add(Label, MMGR_ALLOC_RETURN_USERBLOCK);
 			loadIFrom(frag, MMGR_ALLOC_CURRENT_BLOCK);	// [... block]
 			frag.add(PushI, MMGR_TAG_SIZE_IN_BYTES);	// [... block tagsize]
-			frag.add(Add);								// [... userBlock]
+			frag.add(Add);								// [... userBlock']
 
+			frag.add(Duplicate);						// [... userBlock' userBlock']
+			loadIFrom(frag, MEM_MANAGER_NEXT_RECORDNUM);// [... userBlock' userBlock' recordNum]
+			frag.add(StoreI);							// [... userBlock']
+			incrementInteger(frag, MEM_MANAGER_NEXT_RECORDNUM);
+			
+			frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES);	// [... userBlock' numSize]
+			frag.add(Add); 									// [... userBlock]
+			 
 			loadIFrom(frag, MMGR_ALLOC_RETURN_ADDRESS);
 			frag.add(Return);
 			
@@ -424,7 +456,9 @@ public class MemoryManager {
 		storeITo(frag, MMGR_DEALLOC_RETURN_ADDRESS);	// [... usableBlock]
 		
 		// convert user block to mmgr block
-		frag.add(PushI, MMGR_TAG_SIZE_IN_BYTES);		// [... usableBlock tagsize]
+		frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES); 	// [... recordnumSize]
+		frag.add(Subtract);								// [... usableBlock']
+		frag.add(PushI, MMGR_TAG_SIZE_IN_BYTES);		// [... usableBlock' tagsize]
 		frag.add(Subtract);								// [... block]
 		storeITo(frag, MMGR_DEALLOC_BLOCK);				// [...]
 		
@@ -464,7 +498,142 @@ public class MemoryManager {
 		frag.add(Return);
 		return frag;
 	}
-	
+
+	// [... block] -> [... blockID]
+	private static ASMCodeFragment subroutineGetID() {
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VALUE);
+		frag.add(Label, MEM_MANAGER_GET_ID);		// [... blockPtr returnAddr]
+		frag.add(Exchange);							// [... returnAddr blockPtr]
+		frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES); // [... returnAddr blockPtr recordNumOffset]
+		frag.add(Subtract);							// [... returnAddr recordNumPtr]
+		frag.add(LoadI); 							// [... returnAddr blockID]
+		frag.add(Exchange);							// [... blockID returnAddr]
+		frag.add(Return);							// [... blockID]
+		return frag;
+	}
+	private static ASMCodeFragment subroutineDiagnostics() {
+		String MMGR_DIAG_TEST_PREFIX = "-$mmgr-diag-test-";
+		String MMGR_DIAG_JUMP_TABLE = "-$mmgr-diag-jump-table";
+		String MMGR_DIAG_END    = "-$mmgr-diag-end";
+		int MMGR_DIAG_MAXNUM = 4;
+		
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
+		
+		frag.add(DLabel, MMGR_DIAG_JUMP_TABLE);
+		for(int i=0; i<=MMGR_DIAG_MAXNUM; i++) {
+			frag.add(DataD, MMGR_DIAG_TEST_PREFIX + i);
+		}
+
+		declareI(frag, MMGR_DIAG_RETURN_ADDRESS);
+		
+		frag.add(Label, MEM_MANAGER_DIAGNOSTICS);
+
+		//store return addr
+		storeITo(frag, MMGR_DIAG_RETURN_ADDRESS);	// [... diagNum]
+
+		// assumes diagNum in range 0..MMGR_DIAG_MAXNUM.  If diagNum not in this range, errors result.
+		frag.add(PushI, 4);
+		frag.add(Multiply); 						// [... offset]
+		frag.add(PushD, MMGR_DIAG_JUMP_TABLE);      // [... offset tableBase]
+		frag.add(Add);								// [... entryAddr]
+		frag.add(LoadI);
+		frag.add(JumpV);
+		
+		// to exit, we just put the return address back.
+		frag.add(Label, MMGR_DIAG_END);
+		loadIFrom(frag, MMGR_DIAG_RETURN_ADDRESS);
+		frag.add(Return);
+
+		
+		// diag 0 
+		// no args--does nothing
+		frag.add(Label, MMGR_DIAG_TEST_PREFIX + "0");
+		frag.add(Jump, MMGR_DIAG_END);
+		
+		// diag 1::n;					[... n] -> [...]
+		// prints the int arg n followed by nl
+		frag.add(Label, MMGR_DIAG_TEST_PREFIX + "1");
+		
+		frag.add(PushD, RunTime.INTEGER_PRINT_FORMAT);	// "%d" (0-terminated, no header)
+		frag.add(Printf);
+		frag.add(PushD, RunTime.NEWLINE_PRINT_FORMAT);  // "\n" (0-terminated, no header)
+		frag.add(Printf);
+		
+		frag.add(Jump, MMGR_DIAG_END);
+		
+
+		// diag 2::stringRecord;
+		// prints the record header
+		frag.add(Label, MMGR_DIAG_TEST_PREFIX + "2");
+
+		printIOffset(frag, -4);				// mmgrBlocknum
+		printIOffset(frag, 0);				// typeID
+		printIOffset(frag, 4);				// status
+		printCasIOffset(frag, 8);			// refcount
+		printIOffsetNL(frag, 9);			// length
+
+		frag.add(Jump, MMGR_DIAG_END);
+		
+		
+		
+		// diag 3::arrayRecord;	
+		// prints the record header
+		frag.add(Label, MMGR_DIAG_TEST_PREFIX + "3");
+
+		printIOffset(frag, -4);			    // mmgrBlocknum
+		printIOffset(frag, 0);				// typeID
+		printIOffset(frag, 4);				// status
+		printCasIOffset(frag, 8);			// refcount
+		printIOffset(frag, 9);				// subtypeSize
+		printIOffsetNL(frag, 13);			// length
+
+		frag.add(Pop);
+		frag.add(Jump, MMGR_DIAG_END);
+
+		// diag 4::arg1, arg2, arg3;
+		// does nothing
+		frag.add(Label, MMGR_DIAG_TEST_PREFIX + "4");
+		frag.add(Pop);
+		frag.add(Pop);
+		frag.add(Pop);
+		frag.add(Jump, MMGR_DIAG_END);
+		
+		return frag;
+	}
+
+	/*
+	 * [... baseAddr] -> [... baseAddr]
+	 */
+	public static void printIOffset(ASMCodeFragment frag, int offset) {
+		frag.add(Duplicate);							// refcount
+		frag.add(PushI, offset);
+		frag.add(Add);
+		frag.add(LoadI);
+		frag.add(PushD, RunTime.INTEGER_PRINT_FORMAT);
+		frag.add(Printf);
+		frag.add(PushD, RunTime.SEPARATOR_PRINT_FORMAT);
+		frag.add(Printf);
+	}
+	public static void printIOffsetNL(ASMCodeFragment frag, int offset) {
+		frag.add(Duplicate);							// refcount
+		frag.add(PushI, offset);
+		frag.add(Add);
+		frag.add(LoadI);
+		frag.add(PushD, RunTime.INTEGER_PRINT_FORMAT);
+		frag.add(Printf);
+		frag.add(PushD, RunTime.NEWLINE_PRINT_FORMAT);
+		frag.add(Printf);
+	}
+	public static void printCasIOffset(ASMCodeFragment frag, int offset) {
+		frag.add(Duplicate);							// refcount
+		frag.add(PushI, offset);
+		frag.add(Add);
+		frag.add(LoadC);
+		frag.add(PushD, RunTime.INTEGER_PRINT_FORMAT);
+		frag.add(Printf);
+		frag.add(PushD, RunTime.SEPARATOR_PRINT_FORMAT);
+		frag.add(Printf);
+	}
 ////////////////////////////////////////////////////////////////////////////////////
 //Macros: these get inlined into the subroutines defined above.
 ////////////////////////////////////////////////////////////////////////////////////
@@ -532,7 +701,6 @@ public class MemoryManager {
 ////////////////////////////////////////////////////////////////////////////////////
 //Testing/Debug code
 ////////////////////////////////////////////////////////////////////////////////////
-	private static Labeller labeller = new Labeller();
 
 	private static final String MMGRD_FORMAT = "$$debug-format";
 	private static final String MMGRD_FORMAT_FOR_STRING = "$$debug-format-for-string";
@@ -560,7 +728,7 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK1);			// [... block1]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation done\n");
+		debugPrintString(frag, "deallocation done\n");
 		
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 		
@@ -571,7 +739,7 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK2);			// [... block2]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation 2 done\n");
+		debugPrintString(frag, "deallocation 2 done\n");
 
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 		
@@ -583,7 +751,7 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK3);			// [... block3]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation 3 done\n");
+		debugPrintString(frag, "deallocation 3 done\n");
 
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 		
@@ -596,7 +764,7 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK4);			// [... block4]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation 4 done\n");
+		debugPrintString(frag, "deallocation 4 done\n");
 
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 		
@@ -610,7 +778,7 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK1);			// [... block4]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation 5 done\n");
+		debugPrintString(frag, "deallocation 5 done\n");
 
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 		
@@ -625,59 +793,30 @@ public class MemoryManager {
 		
 		loadIFrom(frag, MMGRD_MAIN_BLOCK1);			// [... block4]
 		debugSystemBlockDeallocate(frag);
-		debugPrint(frag, "deallocation 6 done\n");
+		debugPrintString(frag, "deallocation 6 done\n");
 
 		frag.add(Call, MMGRD_PRINT_FREE_LIST);
 	}
 	private static void debugPrintBlockFromPointer(ASMCodeFragment frag, String pointerName) {
 		loadIFrom(frag, pointerName);
 		frag.add(Call, MMGRD_PRINT_BLOCK);	
-		debugPrint(frag, "\n");
+		debugPrintString(frag, "\n");
 	}
 
 	// [... size] -> [... block]
 	private static void debugSystemBlockAllocate(ASMCodeFragment frag) {
 		frag.add(Call, MEM_MANAGER_ALLOCATE);	// [... userblock]
+		frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES);
+		frag.add(Subtract);
 		frag.add(PushI, MMGR_TAG_SIZE_IN_BYTES);
 		frag.add(Subtract);						// [... block]
 	}
 	private static void debugSystemBlockDeallocate(ASMCodeFragment frag) {
 		frag.add(PushI, MMGR_TAG_SIZE_IN_BYTES);	// [... block1 tagsize]
 		frag.add(Add);								// [... userBlock1]
+		frag.add(PushI, MMGR_RECORDNUM_SIZE_IN_BYTES);
+		frag.add(Add);
 		frag.add(Call, MEM_MANAGER_DEALLOCATE);		// [...]
-	}
-	
-
-	// prints top of stack 
-	// [... t] -> [... t]
-	@SuppressWarnings("unused")
-	private static void debugPeekI(ASMCodeFragment frag, String printString) {
-		String label = labeller.newLabel("$$debug-print-", "");
-		frag.add(DLabel, label);
-		frag.add(DataS, printString);
-		
-		frag.add(Duplicate);			// [... t t]
-		frag.add(PushD, label);			// [... t t printString]
-		frag.add(PushD, MMGRD_FORMAT);  
-		frag.add(Printf);
-	}	
-	private static void debugPrint(ASMCodeFragment frag, String printString) {
-		String label = labeller.newLabel("$$debug-print-", "");
-		frag.add(DLabel, label);
-		frag.add(DataS, printString);
-		frag.add(PushD, label);
-		frag.add(PushD, MMGRD_FORMAT_FOR_STRING);
-		frag.add(Printf);
-	}	
-	@SuppressWarnings("unused")
-	private static void debugPrintI(ASMCodeFragment frag, String printString, String name) {
-		String label = labeller.newLabel("$$debug-print-", "");
-		loadIFrom(frag, name);
-		frag.add(DLabel, label);
-		frag.add(DataS, printString);
-		frag.add(PushD, label);
-		frag.add(PushD, MMGRD_FORMAT);
-		frag.add(Printf);
 	}
 	
 
@@ -747,7 +886,7 @@ public class MemoryManager {
 		
 		storeITo(frag, MMGRD_PFREE_RETURN_ADDRESS);
 		
-		debugPrint(frag, "Free list:\n");
+		debugPrintString(frag, "Free list:\n");
 		
 		
 		loadIFrom(frag, MEM_MANAGER_FIRST_FREE_BLOCK);
@@ -759,10 +898,10 @@ public class MemoryManager {
 			frag.add(JumpFalse, MMGRD_PFREE_LOOP_DONE);
 			
 			// print "    "+currentBlock;
-			debugPrint(frag, "    ");						
+			debugPrintString(frag, "    ");						
 			loadIFrom(frag, MMGRD_PFREE_CURRENT_BLOCK);
 			frag.add(Call, MMGRD_PRINT_BLOCK);
-			debugPrint(frag, "\n");
+			debugPrintString(frag, "\n");
 			
 			// currentBlock = currentBlock.next
 			loadIFrom(frag, MMGRD_PFREE_CURRENT_BLOCK);		// [... block]
@@ -772,40 +911,18 @@ public class MemoryManager {
 			
 			frag.add(Jump, MMGRD_PFREE_LOOP_TEST);
 
-		frag.add(Label, MMGRD_PFREE_LOOP_DONE);
-			debugPrint(frag, "\n");
+			frag.add(Label, MMGRD_PFREE_LOOP_DONE);
+			debugPrintString(frag, "\n");
 			loadIFrom(frag, MMGRD_PFREE_RETURN_ADDRESS);
 			frag.add(Return);
 		return frag;
-	}	
-	
-	////////////////////////////////////////////////////////////////////
-    // debugging aids
-	public static void pstack(ASMCodeFragment code, String string) {
-		String stringLabel = labeller.newLabel("mm-pstack-", "");
-		code.add(DLabel, stringLabel);
-		code.add(DataS, string + " ");
-		code.add(PushD, stringLabel);
-		code.add(Printf);
-		code.add(PStack);
 	}
-
-	// does not disturb stack.  Takes a format string
-	public static void ptop(ASMCodeFragment code, String format) {
-		code.add(Duplicate);
-		String stringLabel = labeller.newLabel("mm-ptop-", "");
+	public static void debugPrintString(ASMCodeFragment code, String string) {
+		String stringLabel = labeller.newLabel("debug-pstring", "");
 		code.add(DLabel, stringLabel);
-		code.add(DataS, format);
+		code.add(DataS, string);
 		code.add(PushD, stringLabel);
-		code.add(Printf);
-	}	
-	// does not disturb stack.  Takes a format string - no %'s!
-	public static void pstring(ASMCodeFragment code, String format) {
-		String stringLabel = labeller.newLabel("mm-pstring-", "");
-		code.add(DLabel, stringLabel);
-		code.add(DataS, format);
-		code.add(PushD, stringLabel);
+		code.add(PushD, STRING_PRINT_FORMAT);
 		code.add(Printf);
 	}
-
 }

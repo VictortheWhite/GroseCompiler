@@ -1446,6 +1446,7 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			code.append(expr);
+			code.add(Call, MemoryManager.MEM_MANAGER_GET_ID);
 			// do something
 		}
 		
