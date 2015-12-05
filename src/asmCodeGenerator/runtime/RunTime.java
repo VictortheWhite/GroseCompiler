@@ -1,8 +1,17 @@
  package asmCodeGenerator.runtime;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import semanticAnalyzer.SemanticAnalyzer;
+import symbolTable.Binding;
+import symbolTable.StaticBinding;
+import symbolTable.Scope;
 import asmCodeGenerator.Macros;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
+
 public class RunTime {
 	public static final String EAT_LOCATION_ZERO      = "$eat-location-zero";		// helps us distinguish null pointers from real ones.
 	public static final String INTEGER_PRINT_FORMAT   = "$print-format-integer";
@@ -16,10 +25,10 @@ public class RunTime {
 	public static final String NULL_POINTER_STRING    = "$null-pointer-string";
 	public static final String BOOLEAN_FALSE_STRING   = "$boolean-false-string";
 	public static final String GLOBAL_MEMORY_BLOCK    = "$global-memory-block";
+	public static final String STATIC_VARIABLE_BLOCK  = "$static-variable-block";
 	public static final String USABLE_MEMORY_START    = "$usable-memory-start";
 	public static final String FRAME_POINTER		  = "$frame-pointer";
 	public static final String STACK_POINTER		  = "$stack-pointer";
-	
 	public static final String MAIN_PROGRAM_LABEL     = "$$main";
 	
 	public static final String STRING_CONCA_ARG1	  = "$string-concatenation-arg1";
@@ -43,6 +52,7 @@ public class RunTime {
 		ASMCodeFragment result = new ASMCodeFragment(GENERATES_VOID);
 		
 		result.append(initializeFPandSP());
+		result.append(initializeStaticVariableBlock());
 		result.append(jumpToMain());
 		result.append(stringsForPrintf());
 		result.append(runtimeErrors());
@@ -76,6 +86,25 @@ public class RunTime {
 		frag.add(PushD, STACK_POINTER);
 		frag.add(Exchange);
 		frag.add(StoreI);
+		
+		return frag;
+	}
+	
+	private ASMCodeFragment initializeStaticVariableBlock() {
+		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
+		
+		Scope staticVariableScope = SemanticAnalyzer.getStaticVariableScope();
+		int blockSize = staticVariableScope.getAllocatedSize();
+		List<Binding> bindings = new ArrayList<Binding>(staticVariableScope.getSymbolTable().values());
+		
+		frag.add(DLabel, STATIC_VARIABLE_BLOCK);
+		frag.add(DataZ, blockSize);
+		
+		for(Binding binding: bindings) {
+			String Label = ((StaticBinding)binding).getIndicatorLabel();
+			frag.add(DLabel, Label);
+			frag.add(DataC, 0);
+		}
 		
 		return frag;
 	}

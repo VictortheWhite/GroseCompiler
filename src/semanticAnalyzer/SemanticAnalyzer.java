@@ -12,6 +12,7 @@ public class SemanticAnalyzer {
 	ParseNode ASTree;
 	
 	private static Scope globalScope;
+	private static Scope staticVariableScope;
 	
 	public static ParseNode analyze(ParseNode ASTree) {
 		SemanticAnalyzer analyzer = new SemanticAnalyzer(ASTree);
@@ -19,6 +20,7 @@ public class SemanticAnalyzer {
 	}
 	public SemanticAnalyzer(ParseNode ASTree) {
 		this.ASTree = ASTree;
+		staticVariableScope = Scope.createStaticVariableScope();
 	}
 	
 	public ParseNode analyze() {		
@@ -49,9 +51,12 @@ public class SemanticAnalyzer {
 		globalScope = global;
 	}
 	
-	
 	public static Scope getGlobalScope() {
 		return globalScope;
+	}
+	
+	public static Scope getStaticVariableScope() {
+		return staticVariableScope;
 	}
 	
 }

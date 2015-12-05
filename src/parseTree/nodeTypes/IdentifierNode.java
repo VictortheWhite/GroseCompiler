@@ -6,6 +6,7 @@ import logging.GrouseLogger;
 import symbolTable.Binding;
 import symbolTable.FunctionBinding;
 import symbolTable.Scope;
+import symbolTable.StaticBinding;
 import symbolTable.TupleBinding;
 import tokens.IdentifierToken;
 import tokens.Token;
@@ -42,6 +43,15 @@ public class IdentifierNode extends ParseNode {
 	}
 	public Binding getBinding() {
 		return binding;
+	}
+	
+	public boolean isStatic() {
+		return this.binding instanceof StaticBinding;
+	}
+	
+	public String getIsDeclaraedIndicatorLabel() {
+		assert this.binding instanceof StaticBinding;
+		return ((StaticBinding)this.binding).getIndicatorLabel();
 	}
 	
 ////////////////////////////////////////////////////////////

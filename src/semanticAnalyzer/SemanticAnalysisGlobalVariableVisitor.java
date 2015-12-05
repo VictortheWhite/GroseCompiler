@@ -53,7 +53,11 @@ public class SemanticAnalysisGlobalVariableVisitor extends ParseNodeVisitor.Defa
 		node.setType(declarationType);
 		
 		identifier.setType(declarationType);
-		addGlobalVariableBinding(identifier, declarationType);
+		
+		if(node.isStatic()) 
+			addGlobalStaticBinding(identifier, declarationType);
+		else
+			addGlobalVariableBinding(identifier, declarationType);
 		
 		if(node.getToken().isLextant(Keyword.IMMUTABLE)) {
 			identifier.getBinding().setImmutablity(true);
@@ -448,7 +452,22 @@ public class SemanticAnalysisGlobalVariableVisitor extends ParseNodeVisitor.Defa
 		identifierNode.setBinding(binding);
 	}
 	
-	
+	// for static variables
+	// add binding to staticScope
+	// and its local scope
+	private void addGlobalStaticBinding(IdentifierNode identifierNode, Type type) {
+		if(!identifierNode.canBeShadowed()) {
+			identifierNode.setBinding(Binding.nullInstance());
+		}
+		Scope staticScope = SemanticAnalyzer.getStaticVariableScope();
+		Scope localScope = SemanticAnalyzer.getGlobalScope();
+		
+		Binding realBinding = staticScope.createStaticBinding(identifierNode, type);
+		Binding binding = localScope.createBinding(realBinding);
+			
+		identifierNode.setBinding(binding);
+	}
+
 	///////////////////////////////////////////////////////////////////////////
 	// error logging/printing
 

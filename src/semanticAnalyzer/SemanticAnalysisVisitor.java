@@ -157,7 +157,11 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		node.setType(declarationType);
 		
 		identifier.setType(declarationType);
-		addBinding(identifier, declarationType);
+		
+		if(node.isStatic())
+			addStaticBinding(identifier, declarationType);
+		else
+			addBinding(identifier, declarationType);
 		
 		if(node.getToken().isLextant(Keyword.IMMUTABLE)) {
 			identifier.getBinding().setImmutablity(true);
@@ -700,6 +704,22 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		}
 		Scope scope = identifierNode.getLocalScope();
 		Binding binding = scope.createBinding(identifierNode, type);
+		identifierNode.setBinding(binding);
+	}
+	
+	// for static variables
+	// add binding to staticScope
+	// and its local scope
+	private void addStaticBinding(IdentifierNode identifierNode, Type type) {
+		if(!identifierNode.canBeShadowed()) {
+			identifierNode.setBinding(Binding.nullInstance());
+		}
+		Scope staticScope = SemanticAnalyzer.getStaticVariableScope();
+		Scope localScope = identifierNode.getLocalScope();
+		
+		Binding realBinding = staticScope.createStaticBinding(identifierNode, type);
+		Binding binding = localScope.createBinding(realBinding);
+		
 		identifierNode.setBinding(binding);
 	}
 	

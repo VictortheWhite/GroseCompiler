@@ -649,16 +649,44 @@ public class ASMCodeGenerator {
 		//-------------------------------------------------------
 		// Declaration and Reassignment
 		public void visitLeave(DeclarationNode node) {
-			newVoidCode(node);
+			IdentifierNode identifier = (IdentifierNode)node.child(0);
+			String endOfDeclarationLabel = labeller.newLabel("declaracion-end", "");
+			
 			ASMCodeFragment lvalue = removeAddressCode(node.child(0));	
 			ASMCodeFragment rvalue = removeValueCode(node.child(1));
 			
+			newVoidCode(node);
+			
+			jumpOverIfDeclaredStaticVariable(identifier, endOfDeclarationLabel);
 			code.append(lvalue);
 			code.append(rvalue);
 
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
+			addEndLabelIfStaticDeclaration(identifier, endOfDeclarationLabel);
+			
 		}
+		
+		private void jumpOverIfDeclaredStaticVariable(IdentifierNode identifier, String endLabel) {
+			if(!identifier.isStatic()) {
+				return;
+			}
+			
+			code.add(PushD, identifier.getIsDeclaraedIndicatorLabel());
+			code.add(LoadC);
+			code.add(JumpTrue, endLabel);
+			// set isDeclaredBit to 1
+			code.add(PushD, identifier.getIsDeclaraedIndicatorLabel());
+			code.add(PushI, 1);
+			code.add(StoreC);
+		}
+		private void addEndLabelIfStaticDeclaration(IdentifierNode identifier, String endLabel) {
+			if(!identifier.isStatic()) {
+				return;
+			}		
+			code.add(Label, endLabel);
+		}
+		
 		public void visitLeave(ReassignmentNode node) {
 			newVoidCode(node);
 			ASMCodeFragment lvalue = removeAddressCode(node.child(0));
