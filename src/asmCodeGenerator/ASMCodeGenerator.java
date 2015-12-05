@@ -210,17 +210,26 @@ public class ASMCodeGenerator {
 		///////////////////////////////////////////////////////////////////////////
 		// constructs larger than statements
 		public void visitLeave(ProgramNode node) {
+			ASMCodeFragment GlobalVariableDeclaraction = new ASMCodeFragment(GENERATES_VOID);
 			newVoidCode(node);
 			for(ParseNode child : node.getChildren()) {
 				if(child instanceof TupleDefinitionNode)
 					continue;
-				ASMCodeFragment childCode = removeVoidCode(child);
-				code.append(childCode);
+				if(child instanceof DeclarationNode) {
+					GlobalVariableDeclaraction.append(removeVoidCode(child));
+				}
+				if(child instanceof FunctionDefinitionNode) {
+					code.append(removeVoidCode(child));
+				}
+				if(child instanceof MainBlockNode) {
+					code.add(Label, RunTime.MAIN_PROGRAM_LABEL);
+					code.append(GlobalVariableDeclaraction);
+					code.append(removeVoidCode(child));
+				}
 			}
 		}
 		public void visitLeave(MainBlockNode node) {
 			newVoidCode(node);
-			code.add(Label, RunTime.MAIN_PROGRAM_LABEL);
 			for(ParseNode child : node.getChildren()) {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
@@ -410,7 +419,7 @@ public class ASMCodeGenerator {
 		}
 		private void appendPrintCode(ParseNode node) {
 
-			code.append(removeValueCode(node));
+			code.append(removeValueCode(node));			
 			printPrimitiveType(node.getType());
 		}
 		
@@ -649,7 +658,6 @@ public class ASMCodeGenerator {
 
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
-
 		}
 		public void visitLeave(ReassignmentNode node) {
 			newVoidCode(node);

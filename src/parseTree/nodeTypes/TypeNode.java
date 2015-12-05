@@ -12,8 +12,10 @@ import tokens.Token;
 import semanticAnalyzer.SemanticAnalyzer;
 import semanticAnalyzer.types.*;
 import symbolTable.Binding;
+import symbolTable.FunctionBinding;
 import symbolTable.Scope;
 import symbolTable.SymbolTable;
+import symbolTable.TupleBinding;
 
 public class TypeNode extends ParseNode {
 	
@@ -72,6 +74,11 @@ public class TypeNode extends ParseNode {
 		}
 		
 		Binding binding = globalSymbolTable.lookup(tupleName);
+		
+		if(!(binding instanceof TupleBinding) || !(binding instanceof FunctionBinding)) {
+			useBeforeDefineError();
+		}
+		
 		return binding.getType();
 	}
 

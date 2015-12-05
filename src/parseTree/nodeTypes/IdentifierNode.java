@@ -4,7 +4,9 @@ import parseTree.ParseNode;
 import parseTree.ParseNodeVisitor;
 import logging.GrouseLogger;
 import symbolTable.Binding;
+import symbolTable.FunctionBinding;
 import symbolTable.Scope;
+import symbolTable.TupleBinding;
 import tokens.IdentifierToken;
 import tokens.Token;
 
@@ -48,13 +50,13 @@ public class IdentifierNode extends ParseNode {
 	public Binding findVariableBinding() {
 		String identifier = token.getLexeme();
 
-		for(ParseNode current : pathToRoot()) {
-			if(current instanceof ProgramNode) {
-				break;	// cannot loop up variable in global symbolTable
-			}
-			
+		for(ParseNode current : pathToRoot()) {	
 			if(current.containsBindingOf(identifier)) {
 				declarationScope = current.getScope();
+				Binding binding = current.bindingOf(identifier);
+				if((binding instanceof TupleBinding) || (binding instanceof FunctionBinding)) {
+					break;
+				}
 				return current.bindingOf(identifier);
 			}
 		}

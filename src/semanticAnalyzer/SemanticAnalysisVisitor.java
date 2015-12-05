@@ -27,7 +27,7 @@ import symbolTable.Scope;
 import tokens.LextantToken;
 import tokens.Token;
 
-class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
+public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	@Override
 	public void visitLeave(ParseNode node) {
 		throw new RuntimeException("Node class unimplemented in SemanticAnalysisVisitor: " + node.getClass());
