@@ -17,6 +17,7 @@ public class TupleType implements Type{
 	private String TupleName;
 	private SymbolTable symbolTable;					// SymbolTable of tuple sub-Elements if defined by parameterList
 	private TupleType refferedType;						// Name of reffered tuple if defined by another tuple
+	private String tupleAttributeTable;
 	private int typeId;
 	
 	private static int TypeIdCount = 100;
@@ -26,7 +27,9 @@ public class TupleType implements Type{
 		this.TupleName = name;
 		this.symbolTable = null;
 		this.refferedType = null;
-		this.typeId = TypeIdCount++;
+		this.typeId = -1;
+		this.tupleAttributeTable = "tuple-" + this.TupleName 
+									+ "-attributeTable";
 	}
 	
 	
@@ -46,8 +49,6 @@ public class TupleType implements Type{
 		}
 		
 		List<Type> otherTupleArgList = ((TupleType)otherType).getParameterList();
-		System.out.println(this.infoString());
-		System.out.println(((Type)otherType).infoString());
 		
 		return this.checkArugments(otherTupleArgList);
 	}
@@ -99,6 +100,10 @@ public class TupleType implements Type{
 		}
 		this.symbolTable = current.symbolTable;
 		assert symbolTable != null;
+		
+		if(!this.isTrivial()) {
+			this.typeId = TypeIdCount++;
+		}
 	}
 	
 	// eliminate TrivialTupleType in symbolTable
@@ -208,7 +213,17 @@ public class TupleType implements Type{
 		return resultType;
 	}
 
+	public SymbolTable getSymbolTable() {
+		return this.getSymbolTable();
+	}
 	
+	public static int getTypeIDCount() {
+		return TypeIdCount;
+	}
+	
+	public String getAttributeTableLabel() {
+		return this.tupleAttributeTable;
+	}
 	
 	////////////////////////////////////////////////////////////
 	// error logging
@@ -219,6 +234,10 @@ public class TupleType implements Type{
 	
 	////////////////////////////////////////////////////////////
 	// type info
+	public boolean isReferenceType() {
+		return true;
+	}
+	
 	public int getSize() {
 		return 4;
 	}

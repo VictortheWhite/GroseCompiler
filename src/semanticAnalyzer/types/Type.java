@@ -1,6 +1,10 @@
 package semanticAnalyzer.types;
 
 public interface Type {
+	/*	returns whether this type is a referenceType
+	 *  is a reference type if String, ArrayType or TupleType
+	 */
+	public boolean isReferenceType();
 	/** returns the size of an instance of this type, in bytes.
 	 * 
 	 * @return number of bytes per instance

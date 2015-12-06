@@ -28,6 +28,10 @@ public class TypeVariable implements Type{
 	public void reset() {
 		this.type = null;
 	}
+	//////////////////////////////////////////////
+	public boolean isReferenceType() {
+		return true;
+	}
 	
  	public int getSize() {
 		return type.getSize();

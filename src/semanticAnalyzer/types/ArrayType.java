@@ -39,11 +39,19 @@ public class ArrayType implements Type{
 			return;
 		}
 	}
-	
+	////////////////////////////////////////////////////
+	public boolean isSubTypeReference() {
+		return (this.subType instanceof ArrayType) 
+				|| (this.subType  instanceof TupleType) 
+				|| (this.subType == PrimitiveType.STRING);
+	}
 	
 	
 	public Type getSubType() {
 		return subType;
+	}
+	public boolean isReferenceType() {
+		return true;
 	}
 	public int getSize() {
 		return 4;		

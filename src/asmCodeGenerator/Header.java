@@ -110,25 +110,31 @@ public class Header {
 		code.add(ASMOpcode.StoreC);
 	}
 	public int getStatusCode(Type type) {
+		assert (type instanceof TupleType) || (type instanceof ArrayType);
 		int StatusCode = 0;
-		int isMutable = 0;
-		int isSubTypeReference = 0;
-		int doNotDispose = 1;
 		
+		int isImmutable = 0;
+		int isSubTypeReference = 0;
+		int doNotDispose = 0;
+		/*
 		if(type == PrimitiveType.STRING) {
-			isMutable = 1;
-			isSubTypeReference = 1;
+			isImmutable = 1;
+			isSubTypeReference = 0;
 			doNotDispose = 0;
 		}
-		if(type instanceof ArrayType)
-			isSubTypeReference = 1;
+		*/
+		if(type instanceof ArrayType) {
+			if(((ArrayType)type).isSubTypeReference())
+				isSubTypeReference = 1;
+		}
+			
 		if(type instanceof TupleType) {
 			if(((TupleType)type).subTypeIsReference())
 				isSubTypeReference = 1;
 		}
 		
 		
-		StatusCode += isMutable;				// may be mutated
+		StatusCode += isImmutable;				// may be mutated
 		StatusCode += isSubTypeReference * 2;	// set to 1 if subtype is reference type, otherwise 0
 		StatusCode += doNotDispose * 4;					// set do-not-dispose to 1
 		

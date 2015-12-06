@@ -7,6 +7,7 @@ import java.util.Map;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 import asmCodeGenerator.codeStorage.ASMOpcode;
 import asmCodeGenerator.runtime.MemoryManager;
+import asmCodeGenerator.runtime.RecordManager;
 import asmCodeGenerator.runtime.RunTime;
 import asmCodeGenerator.Header;
 import lexicalAnalyzer.Keyword;
@@ -80,6 +81,7 @@ public class ASMCodeGenerator {
 		ASMCodeFragment code = new ASMCodeFragment(GENERATES_VOID);
 		
 		code.append( MemoryManager.codeForInitialization());
+		code.append( RecordManager.codeForInitialization());
 		code.append( RunTime.getEnvironment() );
 		code.append( globalVariableBlockASM() );
 		code.append( programASM() );
@@ -680,6 +682,7 @@ public class ASMCodeGenerator {
 			code.add(PushI, 1);
 			code.add(StoreC);
 		}
+		
 		private void addEndLabelIfStaticDeclaration(IdentifierNode identifier, String endLabel) {
 			if(!identifier.isStatic()) {
 				return;

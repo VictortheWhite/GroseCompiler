@@ -32,9 +32,14 @@ public enum PrimitiveType implements Type {
 		return otherType.equals(this);
 	}
 	////////////////////////////////////////////
+	
 	public int getSize() {
 		return sizeInBytes;
 	}
+	public boolean isReferenceType() {
+		return this == STRING;
+	}
+	
 	public String infoString() {
 		return infoString;
 	}

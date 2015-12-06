@@ -75,7 +75,7 @@ public class TypeNode extends ParseNode {
 		
 		Binding binding = globalSymbolTable.lookup(tupleName);
 		
-		if(!(binding instanceof TupleBinding) || !(binding instanceof FunctionBinding)) {
+		if(!(binding instanceof TupleBinding) && !(binding instanceof FunctionBinding)) {
 			useBeforeDefineError();
 		}
 		

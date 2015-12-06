@@ -108,7 +108,7 @@ public class RunTime {
 		
 		return frag;
 	}
-	
+		
 	private ASMCodeFragment stringsForPrintf() {
 		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
 		frag.add(DLabel, EAT_LOCATION_ZERO);
@@ -624,9 +624,6 @@ public class RunTime {
 		frag.add(Jump, GENERAL_RUNTIME_ERROR);
 	}
 
-	
-	
-	
 	public static ASMCodeFragment getEnvironment() {
 		RunTime rt = new RunTime();
 		return rt.environmentASM();
