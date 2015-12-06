@@ -30,6 +30,7 @@ public class RecordManager {
 	private static final String TUPLE_MASTER_TABLE = "$tuple-attribute-table-address-table";				//store off
 	private static final String TO_BE_CHECKED_LIST = "$to-be-checked-list-table-start";
 	private static final String TO_BE_CHECKED_LIST_SIZE = "$to-be-ckecked-list-table-size";					// in terms of 4byte
+	private static final String DEALLOCATE_CHECKLIST = "deallocate-checked-list-table";
 	
 	private static Labeller labeller = ASMCodeGenerator.getLabeller();
 	
@@ -40,6 +41,7 @@ public class RecordManager {
 		
 		frag.append(initializeTupleAttributeTable());
 		frag.append(initializeToBeCheckedTable());
+		frag.append(deallocateSubRoutine());
 		return frag;
 	}
 	
@@ -94,9 +96,221 @@ public class RecordManager {
 	// Deallocate Module
 	private static ASMCodeFragment deallocateSubRoutine() {
 		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
+		String ItrLocation = "$record-manager-deallocate-itr-adr";
+		String checkListLoopStart = "$record-manager-deallocate-checklist-loop-start";
+		String checkListLoopContinue = "$record-manager-deallocate-chekclist-loop-continue";
+		String checkListLoopEnd = "$record-manager-deallocate-checklist-loop-end";
+		
+		String deallocateStringLabel = "$record-manager-deallocate-string";
+		String deallocateArrayLabel = "$record-manager-deallocate-array";
+		String deallocateTupleLabel = "$record-manager-deallocate-tuple";
+		
+		String deallocateTupleItrLabel = "$record-manager-deallocate-tuple-itr";
+
+		
+		frag.add(DLabel, ItrLocation);
+		frag.add(PushI, 0);
+		frag.add(DLabel, deallocateTupleItrLabel);
+		frag.add(PushI, 0);
+		
+		frag.add(Label, DEALLOCATE_CHECKLIST);
+		
+		frag.add(Label, checkListLoopStart);
+		Macros.loadIFrom(frag, TO_BE_CHECKED_LIST_SIZE);
+		Macros.loadIFrom(frag, ItrLocation);
+		frag.add(Subtract);
+		frag.add(JumpFalse, checkListLoopEnd);		// if size - itr ==0 jump end
+		// real looping start
+		frag.add(PushD, TO_BE_CHECKED_LIST);
+		Macros.loadIFrom(frag, ItrLocation);
+		frag.add(PushI, 4);
+		frag.add(Multiply);							// record location: tableHead + 4*itr
+		frag.add(LoadI);							// [...adr]
+		// jump to continue if do-not-dispose
+		frag.add(Duplicate);
+		Macros.readCOffset(frag, 4);
+		frag.add(PushI, 4);
+		frag.add(BTAnd);
+		frag.add(JumpTrue, checkListLoopContinue);
+		// jump to continue if refcount > 0
+		frag.add(Duplicate);
+		Macros.readCOffset(frag, 8);
+		frag.add(JumpTrue, checkListLoopContinue);
+		// jump to string deallocation
+		frag.add(Duplicate);
+		frag.add(LoadI);							// typeId
+		frag.add(PushI, 10);
+		frag.add(Subtract);
+		frag.add(JumpFalse, deallocateStringLabel);
+		// jump to array deallocation
+		frag.add(Duplicate);
+		frag.add(LoadI);
+		frag.add(PushI, 9);
+		frag.add(Subtract);
+		frag.add(JumpFalse, deallocateArrayLabel);
+		// jump to tuple deallocation
+		frag.add(Duplicate);
+		frag.add(LoadI);
+		frag.add(PushI, 100);
+		frag.add(JumpNeg, deallocateTupleLabel);
+		// gives error if not string, array or tuple
+		frag.add(Call, RunTime.GENERAL_RUNTIME_ERROR); 
+		
+		// deallocate String
+		frag.add(Label, deallocateStringLabel);
+		deallocateRecord(frag);
+		frag.add(Jump, checkListLoopContinue);
+		
+		// deallocate Array
+		frag.add(Label, deallocateArrayLabel);
+		deallocateArray(frag);
+		frag.add(Jump, checkListLoopContinue);
+		
+		// deallocate Tuple
+		frag.add(Label, deallocateTupleLabel);
+		deallocateTuple(frag, deallocateTupleItrLabel);
+		frag.add(Jump, checkListLoopContinue);
+		
+		// loop continue
+		frag.add(Label, checkListLoopContinue);		// adr
+		frag.add(Pop);								
+		Macros.incrementInteger(frag, ItrLocation);	// [...] itr++
+		frag.add(Jump, checkListLoopStart);
+		// loop end
+		frag.add(Label, checkListLoopEnd);
+		
+		// reset size and itr to 0
+		frag.add(PushI, 0);
+		Macros.storeITo(frag, TO_BE_CHECKED_LIST_SIZE);
+		frag.add(PushI, 0);
+		Macros.storeITo(frag, ItrLocation);
 		
 		return frag;
 	}
+	
+	private static void deallocateArray(ASMCodeFragment frag) {
+		String subElementLoopStart = "record-manager-deallocate-array-subelement-start";
+		String subElementLoopEnd = "record-manager-deallocate-array-subelement-end";
+		
+		// [...adr]
+		
+		// if subType is not reference type
+		frag.add(Duplicate);
+		Macros.readIOffset(frag, 4);		// status code
+		frag.add(PushI, 2);
+		frag.add(BTAnd);
+		frag.add(JumpFalse, subElementLoopEnd);
+		
+		// initialize loop invariant
+		frag.add(Duplicate);
+		frag.add(Duplicate);				
+		Macros.readIOffset(frag, 13);				// [...adr adr n]
+		frag.add(Exchange);
+		frag.add(PushI, 17);
+		frag.add(Add);
+		frag.add(Exchange);							// [...adr adr* n]
+		
+		// loop start
+		frag.add(Label, subElementLoopStart);
+		frag.add(Duplicate);
+		frag.add(JumpFalse, subElementLoopEnd);		// if n == 0, jump end
+		frag.add(Exchange);							// [...adr n adr*]
+		// decrement refcount of subElement
+		frag.add(Duplicate);						// [...adr n adr* adr*]
+		frag.add(LoadI);							// [...adr n adr* subElement]
+		decrementRefcount(frag);
+		frag.add(Pop);								// [...adr n adr*]
+		
+		// maintain loop invariant
+		frag.add(PushI, 4);
+		frag.add(Add);
+		frag.add(Exchange);
+		frag.add(PushI, -1);
+		frag.add(Add);								// [...adr adr* n]	n--, adr* += 4
+		frag.add(Jump, subElementLoopStart);
+		
+		// loop end
+		frag.add(Label, subElementLoopEnd);
+		// [...adr n adr*]
+		frag.add(Pop);
+		frag.add(Pop);
+		
+		
+		// deallocate
+		// [...adr]
+		deallocateRecord(frag);
+	}
+	
+	private static void deallocateTuple(ASMCodeFragment frag, String itrLabel) {
+		String attributeLoopStart = "record-manager-deallocate-tuple-attribute-start";
+		String attributeLoopEnd = "record-manager-deallocate-tuple-attribute-end";
+		
+		// [...adr]
+		
+		// jump to loop end subType is not reference type
+		frag.add(Duplicate);
+		Macros.readIOffset(frag, 4);
+		frag.add(PushI, 2);
+		frag.add(BTAnd);
+		frag.add(JumpFalse, attributeLoopEnd);
+		
+		// initialize loop invariant
+		frag.add(PushD, itrLabel);
+		frag.add(PushI, 0);
+		frag.add(StoreI);
+		
+		// loop start
+		frag.add(Label, attributeLoopStart);
+		// get offset
+		// [...adr]
+		frag.add(Duplicate);
+		frag.add(Duplicate);				// [...adr adr]
+		frag.add(LoadI);					// [...adr adr typeId]
+		frag.add(PushI, 100);
+		frag.add(Subtract);
+		frag.add(PushI, 4);
+		frag.add(Multiply);
+		frag.add(PushD, TUPLE_MASTER_TABLE);
+		frag.add(Add);						
+		frag.add(LoadI);					// [...adr adr attriTableStart]
+		Macros.loadIFrom(frag, itrLabel);
+		frag.add(PushI, 4);
+		frag.add(Multiply);
+		frag.add(Add);
+		frag.add(LoadI);					// [...adr adr offset]
+		// if offset == -1. jump end
+		frag.add(Duplicate);
+		frag.add(PushI, -1);
+		frag.add(Subtract);
+		frag.add(JumpFalse, attributeLoopEnd);
+		// decrement refcount of attir
+		frag.add(Add);						// [...adr attriAdr]
+		frag.add(LoadI);					// [...adr attir]
+		decrementRefcount(frag);
+		// increment itr
+		Macros.incrementInteger(frag, itrLabel);
+		frag.add(Jump, attributeLoopStart);
+		
+		frag.add(Label, attributeLoopEnd);	
+		
+		// deallocate Record
+		deallocateRecord(frag);
+		
+		// [...adr]
+		
+	}
+	
+	private static void deallocateRecord(ASMCodeFragment frag) {
+		frag.add(Duplicate);	
+		frag.add(PushI, 0);		
+		frag.add(StoreI);	// erase typeId
+		frag.add(Call, MemoryManager.MEM_MANAGER_DEALLOCATE);
+	}
+	
+	
+	//------------------------------------------------------------
+	// Macros for reference counting
+	
 	
 	
 	// Macros on referenceCounting
@@ -177,7 +391,7 @@ public class RecordManager {
 		code.add(Label, endLabel);
 		
 	}
-	private static void addToCheckList(ASMCodeFragment code) {
+	public static void addToCheckList(ASMCodeFragment code) {
 		/* [...ref]
 		 * add to checklist
 		 * increment checklist size by 1
