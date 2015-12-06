@@ -664,6 +664,12 @@ public class ASMCodeGenerator {
 			code.append(rvalue);
 
 			Type type = node.getType();
+			
+			// if reference type, increment refcount
+			if(type.isReferenceType()) {
+				RecordManager.incrementRefcount(code);
+			}
+			// store
 			code.add(opcodeForStore(type));
 			addEndLabelIfStaticDeclaration(identifier, endOfDeclarationLabel);
 			
@@ -696,7 +702,20 @@ public class ASMCodeGenerator {
 			ASMCodeFragment rvalue = removeValueCode(node.child(1));
 			
 			code.append(lvalue);
+			// decrement refcount of lvalue if reference type
+			if(node.getType().isReferenceType()) {
+				code.add(Duplicate);
+				code.add(LoadI);
+				RecordManager.decrementRefcount(code);
+				code.add(Pop);
+			}
+			
 			code.append(rvalue);
+			// increment refcount of rvalue if reference type
+			if(node.getType().isReferenceType()) {
+				RecordManager.incrementRefcount(code);
+			}
+			
 			
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
@@ -1442,7 +1461,55 @@ public class ASMCodeGenerator {
 			code.add(Exchange);
 			code.add(StoreI);
 			
+			// this copy module does a byte to byte copy
+			// doesn't do anything with refcount
+			// but does header stuff
 			code.add(Call, RunTime.ARRAY_COPY);
+			
+			// increase refcount of subElements if reference type
+			if(node.getType().isReferenceType()) {
+				incrementRefcountOfArraySubElement();
+			}
+			
+		}
+		private void incrementRefcountOfArraySubElement() {
+			String startLoopLabel = labeller.newLabel("$incremnt-array-subelement-refcount-loop-start", "");
+			String endLoopLabel = labeller.newLabelSameNumber("$increment-array-subelement-refcount-loop-end", "");
+			
+			// [...adr]
+			code.add(Duplicate);
+			code.add(Duplicate);			// [...adr adr adr]
+			Macros.readIOffset(code, 13);	// [...adr adr n]
+			
+			code.add(Exchange);
+			code.add(PushI, 17);
+			code.add(Add);
+			code.add(Exchange);				// [...adr adr* n]
+			
+			// loop start
+			code.add(Label, startLoopLabel);
+			// if n == 0, jump end
+			code.add(Duplicate);
+			code.add(JumpFalse, endLoopLabel);
+			// increment refcout
+			code.add(Exchange);				// [...adr n adr*]
+			code.add(Duplicate);
+			code.add(LoadI);				// [...adr n adr* record]
+			RecordManager.incrementRefcount(code);
+			code.add(Pop);					// [...adr n adr*]
+			// increment loop invariant
+			code.add(PushI, 4);
+			code.add(Add);
+			code.add(Exchange);
+			code.add(PushI, -1);
+			code.add(Add);					// [...adr adr* n] n--, adr* +=4
+			// jump start
+			code.add(Jump, startLoopLabel);
+			
+			// loop end
+			code.add(Label, endLoopLabel);	// [...adr adr* n]
+			code.add(Pop);
+			code.add(Pop);
 			
 		}
 		
@@ -1461,6 +1528,23 @@ public class ASMCodeGenerator {
 			code.add(PushI, type.getBytesNeeded());
 			// [...n]
 			code.add(Call, RunTime.TUPLE_COPY);
+			
+			// [...record]
+			// increment refcount of attributes
+			if(node.getType().isReferenceType()) {
+				incrementRefcountOfTupleAttribute((TupleType)node.getType());
+			}
+		}
+		private void incrementRefcountOfTupleAttribute(TupleType type) {
+			for(Binding binding: type.getSymbolTable().values()) {
+				if(binding.getType().isReferenceType()) {
+					int offset = binding.getMemoryLocation().getOffset();
+					
+					code.add(Duplicate);				// [...adr adr]
+					Macros.readIOffset(code, offset);	// [...adr record]
+					RecordManager.incrementRefcount(code);
+				}
+			}
 		}
 		
 		private void visitAddressOfNode(UnaryOperatorNode node, Lextant operator) {
@@ -1533,6 +1617,10 @@ public class ASMCodeGenerator {
 			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE); // allocate memory	[...adr]
 			
 			header.addHeader(code, node);				// this method adds header to array, when returns, the adr still on the top of stack [...adr]
+			
+			// add record to TO_BE_CHECKED_LIST
+			RecordManager.addToCheckList(code);
+			
 			addElementsToArray(code, storeOpcode, subTypeSize, node);
 			
 		}
@@ -1548,6 +1636,10 @@ public class ASMCodeGenerator {
 				childCode = removeValueCode(child);
 				code.add(Duplicate);
 				code.append(childCode);
+				// if reference type, incremnt refcount
+				if(child.getType().isReferenceType()) {
+					RecordManager.incrementRefcount(code);
+				}
 				code.add(storeOpcode);
 				code.add(PushI, subTypeSize);
 				code.add(Add);
@@ -1622,6 +1714,9 @@ public class ASMCodeGenerator {
 			// add header
 			header.addHeader(code, node, lengthVariableLabel, nodeType);// [...adr]
 			
+			// add to TO_BE_CHECKED_LIST
+			RecordManager.addToCheckList(code);
+			
 			code.add(Duplicate);
 			code.add(PushI, 17);
 			code.add(Add);											// [...adr adr+17]
@@ -1660,6 +1755,9 @@ public class ASMCodeGenerator {
 			code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
 			header.addTupleHeader(code, nodeType);
 			
+			// add to TO_BE_CHECKED_LIST
+			RecordManager.addToCheckList(code);
+			
 			// [...adr]		
 			code.add(Duplicate);	
 			code.add(PushI, 9);
@@ -1672,6 +1770,10 @@ public class ASMCodeGenerator {
 				
 				code.add(Duplicate);	// [...adr adr* adr*]
 				code.append(childValue);// [...adr adr* adr* val]
+				// if reference type, increment refcount of childValue
+				if(type.isReferenceType()) {
+					RecordManager.incrementRefcount(code);
+				}
 				code.add(storeOpcode);	// [...adr adr*]
 				code.add(PushI, type.getSize());
 				code.add(Add);			// adr* += typeSize
@@ -1740,6 +1842,8 @@ public class ASMCodeGenerator {
 					code.add(PushI, returnTupleType.getBytesNeeded());
 					code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
 					header.addTupleHeader(code, returnTupleType);
+					// add to TO_BE_CHECKED_LIST
+					RecordManager.addToCheckList(code);
 				} else {
 					if(returnType == PrimitiveType.FLOATING) 
 						code.add(PushF, 0.0);

@@ -271,6 +271,11 @@ public class RunTime {
 		// add terminator
 		frag.add(PushI, 0);
 		frag.add(StoreC); 							// [...R C]
+		
+		// add to TO_BE_CHECKED_LIST
+		RecordManager.addToCheckList(frag);
+		
+		// exchange and return
 		frag.add(Exchange); 						// [...C R]
 		frag.add(Return);							// popPC
 		return frag;
@@ -430,6 +435,11 @@ public class RunTime {
 		
 		// pop adr*
 		frag.add(Pop);									// [...adr]
+		
+		
+		// add to TO_BE_CHECKED_LIST
+		RecordManager.addToCheckList(frag);
+		
 		// exchange and return
 		frag.add(Exchange);
 		frag.add(Return);
@@ -501,7 +511,29 @@ public class RunTime {
 		frag.add(Jump, loop_Start);
 		frag.add(Label, loop_End);
 		frag.add(Pop);
-		frag.add(Pop);						//[...R adr]
+		frag.add(Pop);						// [...R adr]
+		
+		// set header
+		// set refcount to 0
+		frag.add(Duplicate);				// [...R adr adr]
+		frag.add(PushI, 8);
+		frag.add(Add);						// [...R adr adr+8]
+		frag.add(PushI, 0);
+		frag.add(StoreC);					// [...R adr]
+		// set do-not-dispose to 0
+		frag.add(Duplicate);
+		frag.add(PushI, 4);
+		frag.add(Add);
+		frag.add(Duplicate);				// [...R adr+4 adr+4]
+		frag.add(LoadI);
+		frag.add(PushI, 3);					// 011
+		frag.add(BTAnd);					// 0xx
+		frag.add(StoreI);
+		
+		// add to TO_BE_CHECKED_LIST
+		RecordManager.addToCheckList(frag);
+		
+		// exchange and return
 		frag.add(Exchange);
 		frag.add(Return);
 		
@@ -552,7 +584,27 @@ public class RunTime {
 		frag.add(Exchange);					// [...R adr* n]
 		frag.add(Subtract);					// [...R adr]
 		
+		// set header
+		// set refcount to 0
+		frag.add(Duplicate);				// [...R adr adr]
+		frag.add(PushI, 8);
+		frag.add(Add);						// [...R adr adr+8]
+		frag.add(PushI, 0);
+		frag.add(StoreC);					// [...R adr]
+		// set do-not-dispose to 0
+		frag.add(Duplicate);
+		frag.add(PushI, 4);
+		frag.add(Add);
+		frag.add(Duplicate);				// [...R adr+4 adr+4]
+		frag.add(LoadI);
+		frag.add(PushI, 3);					// 011
+		frag.add(BTAnd);					// 0xx
+		frag.add(StoreI);		
 
+		// add to TO_BE_CHECKED_LIST
+		RecordManager.addToCheckList(frag);
+		
+		// exchange and return
 		frag.add(Exchange);
 		frag.add(Return);
 		

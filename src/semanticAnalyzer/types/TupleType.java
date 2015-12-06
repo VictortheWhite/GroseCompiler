@@ -214,7 +214,7 @@ public class TupleType implements Type{
 	}
 
 	public SymbolTable getSymbolTable() {
-		return this.getSymbolTable();
+		return this.symbolTable;
 	}
 	
 	public static int getTypeIDCount() {

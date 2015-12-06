@@ -1,6 +1,5 @@
 package asmCodeGenerator.runtime;
 
-import static asmCodeGenerator.Macros.*;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 
@@ -9,7 +8,6 @@ import java.util.List;
 
 import semanticAnalyzer.SemanticAnalyzer;
 import semanticAnalyzer.types.TupleType;
-import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.FunctionBinding;
 import symbolTable.Scope;
@@ -42,6 +40,7 @@ public class RecordManager {
 		frag.append(initializeTupleAttributeTable());
 		frag.append(initializeToBeCheckedTable());
 		frag.append(deallocateSubRoutine());
+		
 		return frag;
 	}
 	
@@ -128,7 +127,7 @@ public class RecordManager {
 		frag.add(LoadI);							// [...adr]
 		// jump to continue if do-not-dispose
 		frag.add(Duplicate);
-		Macros.readCOffset(frag, 4);
+		Macros.readIOffset(frag, 4);
 		frag.add(PushI, 4);
 		frag.add(BTAnd);
 		frag.add(JumpTrue, checkListLoopContinue);
