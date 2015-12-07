@@ -2,17 +2,25 @@ package semanticAnalyzer;
 
 import parseTree.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import symbolTable.MemoryAccessMethod;
+import symbolTable.MemoryAllocator;
+import symbolTable.MemoryLocation;
+import symbolTable.PositiveMemoryAllocator;
 import symbolTable.Scope;
+import symbolTable.Binding;
 
 //import semanticAnalyzer.types.TupleType;
-//import symbolTable.Binding;
 
 
 public class SemanticAnalyzer {
 	ParseNode ASTree;
 	
 	private static Scope globalScope;
-	private static Scope staticVariableScope;
+	private static List<Binding> staticBindings;
+	private static MemoryAllocator staticAllocator;
 	
 	public static ParseNode analyze(ParseNode ASTree) {
 		SemanticAnalyzer analyzer = new SemanticAnalyzer(ASTree);
@@ -20,7 +28,11 @@ public class SemanticAnalyzer {
 	}
 	public SemanticAnalyzer(ParseNode ASTree) {
 		this.ASTree = ASTree;
-		staticVariableScope = Scope.createStaticVariableScope();
+		staticBindings = new ArrayList<Binding>();
+		staticAllocator = new PositiveMemoryAllocator(
+				MemoryAccessMethod.DIRECT_ACCESS_BASE, 
+				MemoryLocation.STATIC_VARIABLE_BLOCK,
+				0);
 	}
 	
 	public ParseNode analyze() {		
@@ -55,8 +67,12 @@ public class SemanticAnalyzer {
 		return globalScope;
 	}
 	
-	public static Scope getStaticVariableScope() {
-		return staticVariableScope;
+	public static List<Binding> getStaticBindings() {
+		return staticBindings;
+	}
+	
+	public static MemoryAllocator getStaticAllocator() {
+		return staticAllocator;
 	}
 	
 }

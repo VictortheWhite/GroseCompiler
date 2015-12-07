@@ -25,10 +25,11 @@ public class RecordManager {
 	 * and to-be-checked list
 	 * and real deallocate module
 	 */
-	private static final String TUPLE_MASTER_TABLE = "$tuple-attribute-table-address-table";				//store off
+	
+	public static final String DEALLOCATE_CHECKLIST = "$$deallocate-checked-list-table";					// deallocate routinue
+	private static final String TUPLE_MASTER_TABLE = "$tuple-attribute-table-address-table";				// store offset
 	private static final String TO_BE_CHECKED_LIST = "$to-be-checked-list-table-start";
 	private static final String TO_BE_CHECKED_LIST_SIZE = "$to-be-ckecked-list-table-size";					// in terms of 4byte
-	private static final String DEALLOCATE_CHECKLIST = "deallocate-checked-list-table";
 	
 	private static Labeller labeller = ASMCodeGenerator.getLabeller();
 	
@@ -93,7 +94,7 @@ public class RecordManager {
 	
 	
 	// Deallocate Module
-	private static ASMCodeFragment deallocateSubRoutine() {
+	public static ASMCodeFragment deallocateSubRoutine() {
 		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
 		String ItrLocation = "$record-manager-deallocate-itr-adr";
 		String checkListLoopStart = "$record-manager-deallocate-checklist-loop-start";
@@ -108,23 +109,30 @@ public class RecordManager {
 
 		
 		frag.add(DLabel, ItrLocation);
-		frag.add(PushI, 0);
+		frag.add(DataI, 0);
 		frag.add(DLabel, deallocateTupleItrLabel);
-		frag.add(PushI, 0);
+		frag.add(DataI, 0);
 		
 		frag.add(Label, DEALLOCATE_CHECKLIST);
 		
+		//Macros.printStack(frag, "before");
+		
+		// loop start
 		frag.add(Label, checkListLoopStart);
+		// if size - itr ==0 jump end
 		Macros.loadIFrom(frag, TO_BE_CHECKED_LIST_SIZE);
 		Macros.loadIFrom(frag, ItrLocation);
+			//Macros.printStack(frag, "size-itr-of-checklist-loop");
 		frag.add(Subtract);
-		frag.add(JumpFalse, checkListLoopEnd);		// if size - itr ==0 jump end
+		frag.add(JumpFalse, checkListLoopEnd);		
 		// real looping start
 		frag.add(PushD, TO_BE_CHECKED_LIST);
 		Macros.loadIFrom(frag, ItrLocation);
 		frag.add(PushI, 4);
 		frag.add(Multiply);							// record location: tableHead + 4*itr
+		frag.add(Add);
 		frag.add(LoadI);							// [...adr]
+			//Macros.printPtrAndTypeId(frag, "111");
 		// jump to continue if do-not-dispose
 		frag.add(Duplicate);
 		Macros.readIOffset(frag, 4);
@@ -132,6 +140,7 @@ public class RecordManager {
 		frag.add(BTAnd);
 		frag.add(JumpTrue, checkListLoopContinue);
 		// jump to continue if refcount > 0
+			//Macros.printPtrAndRefcount(frag, "refcount");
 		frag.add(Duplicate);
 		Macros.readCOffset(frag, 8);
 		frag.add(JumpTrue, checkListLoopContinue);
@@ -139,6 +148,7 @@ public class RecordManager {
 		frag.add(Duplicate);
 		frag.add(LoadI);							// typeId
 		frag.add(PushI, 10);
+			//Macros.printStack(frag, "typeId - 10");
 		frag.add(Subtract);
 		frag.add(JumpFalse, deallocateStringLabel);
 		// jump to array deallocation
@@ -162,7 +172,9 @@ public class RecordManager {
 		
 		// deallocate Array
 		frag.add(Label, deallocateArrayLabel);
+			//Macros.printStack(frag, "before deallocate array");
 		deallocateArray(frag);
+			//Macros.printStack(frag, "after deallocate array");
 		frag.add(Jump, checkListLoopContinue);
 		
 		// deallocate Tuple
@@ -184,13 +196,17 @@ public class RecordManager {
 		frag.add(PushI, 0);
 		Macros.storeITo(frag, ItrLocation);
 		
+				//Macros.printStack(frag, "after");
+		frag.add(Return);
+		
 		return frag;
 	}
 	
-	private static void deallocateArray(ASMCodeFragment frag) {
+ 	private static void deallocateArray(ASMCodeFragment frag) {
 		String subElementLoopStart = "record-manager-deallocate-array-subelement-start";
 		String subElementLoopEnd = "record-manager-deallocate-array-subelement-end";
 		
+		String deallocateRecordStart = "record-manager-deallocate-array-end";
 		// [...adr]
 		
 		// if subType is not reference type
@@ -198,7 +214,7 @@ public class RecordManager {
 		Macros.readIOffset(frag, 4);		// status code
 		frag.add(PushI, 2);
 		frag.add(BTAnd);
-		frag.add(JumpFalse, subElementLoopEnd);
+		frag.add(JumpFalse, deallocateRecordStart);
 		
 		// initialize loop invariant
 		frag.add(Duplicate);
@@ -235,7 +251,9 @@ public class RecordManager {
 		frag.add(Pop);
 		
 		
+		
 		// deallocate
+		frag.add(Label, deallocateRecordStart);
 		// [...adr]
 		deallocateRecord(frag);
 	}
@@ -286,6 +304,7 @@ public class RecordManager {
 		frag.add(Add);						// [...adr attriAdr]
 		frag.add(LoadI);					// [...adr attir]
 		decrementRefcount(frag);
+		frag.add(Pop);						// [...adr]
 		// increment itr
 		Macros.incrementInteger(frag, itrLabel);
 		frag.add(Jump, attributeLoopStart);
@@ -299,8 +318,11 @@ public class RecordManager {
 		
 	}
 	
+	
 	private static void deallocateRecord(ASMCodeFragment frag) {
-		frag.add(Duplicate);	
+		// [...ptr] -> [...ptr]
+		frag.add(Duplicate);
+		frag.add(Duplicate);
 		frag.add(PushI, 0);		
 		frag.add(StoreI);	// erase typeId
 		frag.add(Call, MemoryManager.MEM_MANAGER_DEALLOCATE);
@@ -309,10 +331,6 @@ public class RecordManager {
 	
 	//------------------------------------------------------------
 	// Macros for reference counting
-	
-	
-	
-	// Macros on referenceCounting
 	// compile time
 	public static void incrementRefcount(ASMCodeFragment code) {
 		/* 
@@ -320,8 +338,9 @@ public class RecordManager {
 		 * if refcount reaches 128
 		 * (skip if ref is null)
 		 */
-		
+			
 		String endLabel = labeller.newLabel("record-manager-increment-refcount-end", "");
+					
 		// jump to end if null
 		code.add(Duplicate);
 		code.add(JumpFalse, endLabel);
@@ -329,34 +348,36 @@ public class RecordManager {
 		// [...ref]
 		// increment refcount
 		code.add(Duplicate);
-		code.add(Duplicate);
 		code.add(PushI, 8);
-		code.add(Add);
-		code.add(LoadC);		// [...ref ref refcount]
+		code.add(Add);				
+		code.add(Duplicate);		// [...ref ref+8 ref+8]
+		code.add(LoadC);			// [...ref ref+8 refcount]
 		code.add(PushI, 1);
 		code.add(Add);
 		code.add(StoreC);		
-		
 		// [...ref]
 		// set do-not-dispose bit to one when needed
-		code.add(Duplicate);
-		Macros.readCOffset(code, 8);
+		code.add(Duplicate);			
+		Macros.readCOffset(code, 8);	
 		code.add(PushI, 128);
+		code.add(Exchange);						// [...ref 128 refcount]
 		code.add(Subtract);
-		code.add(JumpFalse, endLabel);
-		// if refcount is 128, do following
+		code.add(JumpPos, endLabel);			// if 128-refcount > 0 (refcount < 128)
+		// if refcount is 128, do following		
 		setDoNotDiopose(code);
-		
+			
 		// end label
 		code.add(Label, endLabel);
+			
 	}
 	private static void setDoNotDiopose(ASMCodeFragment code) {
-		// [...ref]
+		// [...ref]	
 		code.add(Duplicate);
 		code.add(Duplicate);
 		Macros.readIOffset(code, 4);	//[...ref ref statusCode]
 		code.add(PushI, 4);
 		code.add(BTOr);
+		code.add(StoreI);
 	}
 	
 	public static void decrementRefcount(ASMCodeFragment code) {
@@ -374,8 +395,12 @@ public class RecordManager {
 		// [...ref]
 		// decrement refcount
 		code.add(Duplicate);
-		code.add(Duplicate);			// [...ref ref ref]
-		Macros.readCOffset(code, 8);	// [...ref ref refcount]
+		code.add(PushI, 8);
+		code.add(Add);
+		code.add(Duplicate);	// [...ref ref+8 ref+8]
+		code.add(LoadC);		// [...ref ref+8 refcount]
+		code.add(PushI, -1);
+		code.add(Add);
 		code.add(StoreC);				
 		
 		// [...ref]
@@ -399,11 +424,15 @@ public class RecordManager {
 		code.add(PushD, TO_BE_CHECKED_LIST);
 		Macros.loadIFrom(code, TO_BE_CHECKED_LIST_SIZE);
 		code.add(PushI, 4);
+		code.add(Multiply);
 		code.add(Add);										//[...ref ref adr]
 		code.add(Exchange);									//[...ref adr ref]
 		code.add(StoreI);
 		// increment size by 1
 		Macros.incrementInteger(code, TO_BE_CHECKED_LIST_SIZE);
+		
+		//Macros.printPtrAndRefcount(code, "add-to-list");
+		//Macros.printPtrAndTypeId(code, "add-to-list");
 	}
 	
 	

@@ -2,13 +2,11 @@
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import semanticAnalyzer.SemanticAnalyzer;
 import symbolTable.Binding;
 import symbolTable.StaticBinding;
-import symbolTable.Scope;
 import asmCodeGenerator.Macros;
 import asmCodeGenerator.codeStorage.ASMCodeFragment;
 
@@ -93,9 +91,9 @@ public class RunTime {
 	private ASMCodeFragment initializeStaticVariableBlock() {
 		ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
 		
-		Scope staticVariableScope = SemanticAnalyzer.getStaticVariableScope();
-		int blockSize = staticVariableScope.getAllocatedSize();
-		List<Binding> bindings = new ArrayList<Binding>(staticVariableScope.getSymbolTable().values());
+		List<Binding> bindings = SemanticAnalyzer.getStaticBindings();
+		int blockSize = SemanticAnalyzer.getStaticAllocator().getMaxAllocatedSize();
+		
 		
 		frag.add(DLabel, STATIC_VARIABLE_BLOCK);
 		frag.add(DataZ, blockSize);

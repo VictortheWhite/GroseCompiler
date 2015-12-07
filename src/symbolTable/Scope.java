@@ -26,9 +26,6 @@ public class Scope {
 	public static Scope createProcedureScope() {
 		return new Scope(procedureScopeAllocator(), nullInstance());
 	}
-	public static Scope createStaticVariableScope() {
-		return new Scope(staticScopeAllocator(), nullInstance());
-	}
 	public Scope createSubscope() {
 		return new Scope(allocator, this);
 	}
@@ -62,13 +59,6 @@ public class Scope {
 				);
 	}
 	
-	private static MemoryAllocator staticScopeAllocator() {
-		return new PositiveMemoryAllocator(
-				MemoryAccessMethod.DIRECT_ACCESS_BASE,
-				MemoryLocation.STATIC_VARIABLE_BLOCK,
-				0
-				);
-	}
 //////////////////////////////////////////////////////////////////////
 // private constructor.	
 	private Scope(MemoryAllocator allocator, Scope baseScope) {
@@ -133,16 +123,6 @@ public class Scope {
 	private Binding allocateNewBinding(Type type, TextLocation textLocation, String lexeme) {
 		MemoryLocation memoryLocation = allocator.allocate(type.getSize());
 		return new Binding(type, textLocation, memoryLocation, lexeme);
-	}
-	// static binding
-	public Binding createStaticBinding(IdentifierNode identifierNode, Type type) {
-		Token token = identifierNode.getToken();
-		symbolTable.errorIfAlreadyDefined(token);
-		String lexeme = token.getLexeme();
-		MemoryLocation memoryLocation = allocator.allocate(type.getSize());
-		Binding binding = new StaticBinding(type, token.getLocation(), memoryLocation, lexeme);
-		symbolTable.install(lexeme, binding);
-		return binding;
 	}
 	
 	

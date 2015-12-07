@@ -103,15 +103,35 @@ public class Macros {
 		code.add(Printf);
 		code.add(PStack);
 	}
+	
 	// [... ptr] -> [... ptr]
 	public static void printPtrAndRefcount(ASMCodeFragment code, String prefix) {
 		printStackTop(code, prefix + " ptr: %d ");		// ptr
 		code.add(Duplicate);	// [... ptr ptr]
-		code.add(LoadI);		// [... ptr refcount]
-		printStackTop(code, "<%d>\n");
+		readCOffset(code, 8);
+		printStackTop(code, "refcount: <%d>\n");
 		code.add(Pop);			// [... ptr]
 	}
 	
+	public static void printPtrAndStatusCode(ASMCodeFragment code, String prefix) {
+		printStackTop(code, prefix + " ptr: %d ");		// ptr
+		code.add(Duplicate);	// [... ptr ptr]
+		readIOffset(code, 4);
+		printStackTop(code, "status: <%d>\n");
+		code.add(Pop);			// [... ptr]
+	}
+	
+	public static void printPtrAndTypeId(ASMCodeFragment code, String prefix) {
+		printStackTop(code, prefix + " ptr: %d ");		// ptr
+		code.add(Duplicate);	// [... ptr ptr]
+		code.add(LoadI);
+		printStackTop(code, "typeId: <%d>\n");
+		code.add(Pop);			// [... ptr]
+	}
+	
+	
+	
+	// [...] -> [...]
 	public static void printFramePointer(ASMCodeFragment code, String prefix) {
 		code.add(PushD, RunTime.FRAME_POINTER);
 		code.add(LoadI);

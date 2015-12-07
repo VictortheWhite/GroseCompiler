@@ -55,6 +55,7 @@ import semanticAnalyzer.types.Type;
 import symbolTable.Binding;
 import symbolTable.FunctionBinding;
 import symbolTable.Scope;
+import symbolTable.StaticBinding;
 import static asmCodeGenerator.codeStorage.ASMCodeFragment.CodeType.*;
 import static asmCodeGenerator.codeStorage.ASMOpcode.*;
 
@@ -81,8 +82,8 @@ public class ASMCodeGenerator {
 		ASMCodeFragment code = new ASMCodeFragment(GENERATES_VOID);
 		
 		code.append( MemoryManager.codeForInitialization());
-		code.append( RecordManager.codeForInitialization());
 		code.append( RunTime.getEnvironment() );
+		code.append( RecordManager.codeForInitialization());
 		code.append( globalVariableBlockASM() );
 		code.append( programASM() );
 		code.append( MemoryManager.codeForAfterApplication() );
@@ -244,7 +245,31 @@ public class ASMCodeGenerator {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
 			}
+			
+			// add codes to decrement refcount of variables in scoope
+			// when leaves the scope
+			Scope localScope = node.getScope();
+			decrementRefcountInScope(code, localScope);
+			
 		}
+		
+		private void decrementRefcountInScope(ASMCodeFragment code, Scope scope) {
+			for(Binding binding: scope.getSymbolTable().values()) {
+				if(binding instanceof StaticBinding) {
+					continue;
+				}
+				if(!binding.getType().isReferenceType()) {
+					continue;
+				}
+				ASMCodeFragment frag = new ASMCodeFragment(GENERATES_VOID);
+				binding.generateAddress(frag);			// [...adr]
+				frag.add(LoadI);						// [...record]
+				RecordManager.decrementRefcount(frag);
+				
+				code.append(frag);
+			}
+		}
+		
 		
 		//////////////////////////////////////////////////////////////////////////
 		// function definition
@@ -673,6 +698,8 @@ public class ASMCodeGenerator {
 			code.add(opcodeForStore(type));
 			addEndLabelIfStaticDeclaration(identifier, endOfDeclarationLabel);
 			
+			// deallocate unused memory
+			code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
 		}
 		
 		private void jumpOverIfDeclaredStaticVariable(IdentifierNode identifier, String endLabel) {
@@ -719,6 +746,9 @@ public class ASMCodeGenerator {
 			
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
+			
+			// deallocate unused memory
+			code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
 		}
 		private ASMOpcode opcodeForStore(Type type) {
 			if(type == PrimitiveType.INTEGER) {
@@ -1619,7 +1649,7 @@ public class ASMCodeGenerator {
 			header.addHeader(code, node);				// this method adds header to array, when returns, the adr still on the top of stack [...adr]
 			
 			// add record to TO_BE_CHECKED_LIST
-			RecordManager.addToCheckList(code);
+			//RecordManager.addToCheckList(code);
 			
 			addElementsToArray(code, storeOpcode, subTypeSize, node);
 			
@@ -1899,6 +1929,20 @@ public class ASMCodeGenerator {
 		}
 		public void visit(BreakContinueStatementNode node) {
 			newVoidCode(node);			
+			
+			// decrement refcount of scopes it jumps out
+			for(ParseNode current : node.pathToRoot()) {
+				if((current instanceof WhileStatementNode) || (current instanceof ForStatementNode)) {
+					break;
+				}
+				if(!current.hasScope()) {
+					continue;
+				}
+				
+				Scope localScope = current.getScope();
+				decrementRefcountInScope(code, localScope);
+			}
+			
 			code.add(Jump, node.getJumpLabel());
 		}
 		public void visit(FunctionReturnNode node) {

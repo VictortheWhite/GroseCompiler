@@ -24,6 +24,7 @@ import symbolTable.MemoryAllocator;
 import symbolTable.MemoryLocation;
 import symbolTable.PositiveMemoryAllocator;
 import symbolTable.Scope;
+import symbolTable.StaticBinding;
 import tokens.LextantToken;
 import tokens.Token;
 
@@ -714,12 +715,17 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 		if(!identifierNode.canBeShadowed()) {
 			identifierNode.setBinding(Binding.nullInstance());
 		}
-		Scope staticScope = SemanticAnalyzer.getStaticVariableScope();
+		List<Binding> staticBindings = SemanticAnalyzer.getStaticBindings();
 		Scope localScope = identifierNode.getLocalScope();
+		String lexeme = identifierNode.getToken().getLexeme();
 		
-		Binding realBinding = staticScope.createStaticBinding(identifierNode, type);
-		Binding binding = localScope.createBinding(realBinding);
+		Binding binding = new StaticBinding(type, 
+				identifierNode.getToken().getLocation(), 
+				SemanticAnalyzer.getStaticAllocator().allocate(type.getSize()), 
+				lexeme);
+		binding =localScope.createBinding(binding);
 		
+		staticBindings.add(binding);
 		identifierNode.setBinding(binding);
 	}
 	
