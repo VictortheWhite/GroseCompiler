@@ -21,6 +21,8 @@ import parseTree.nodeTypes.BlockNode;
 import parseTree.nodeTypes.BooleanConstantNode;
 import parseTree.nodeTypes.BreakContinueStatementNode;
 import parseTree.nodeTypes.CharacterConstantNode;
+import parseTree.nodeTypes.DiagnosticStatementNode;
+import parseTree.nodeTypes.ExpressionListNode;
 import parseTree.nodeTypes.ForControlPhraseNode;
 import parseTree.nodeTypes.ForStatementNode;
 import parseTree.nodeTypes.FreshArrayNode;
@@ -1120,6 +1122,65 @@ public class ASMCodeGenerator {
 			
 		}
 
+		public void visitLeave(DiagnosticStatementNode node) {
+			ParseNode IntExpr = node.child(0);
+			
+			newVoidCode(node);
+			if(node.nChildren() == 1) { 
+				code.append(removeValueCode(IntExpr));
+			}
+			if(node.nChildren() == 2) {
+				ExpressionListNode exprList = (ExpressionListNode)node.child(1);
+				int size = exprList.getExprListSize() + 4;
+				String argsLocation = labeller.newLabel("$diagnostic-statement-args-location", "");
+				int []offsets = new int[exprList.nChildren()+1];				
+				
+				
+				code.add(Label, argsLocation);
+				code.add(DataZ, size);
+				
+				// store intExpr
+				code.add(PushD, argsLocation);
+				code.append(removeValueCode(IntExpr));
+				code.add(StoreI);
+				offsets[0] = 0;
+				
+				int i  = 1;
+				int offset = 4;
+				for(ParseNode expr: exprList.getChildren()) {
+					ASMOpcode storeOpcode = opcodeForStore(expr.getType());
+					code.append(removeValueCode(expr));		// [...expr]
+					code.add(PushD, argsLocation);
+					code.add(PushI, offset);
+					code.add(Add);							// [...expr adr]
+					code.add(Exchange);
+					code.add(storeOpcode);
+									
+					offsets[i] = offset;
+					offset += expr.getType().getSize();
+					i++;
+				}
+				
+				// place it on asm stack in reverse order
+				for(int j = exprList.nChildren(); j > 0; j--) {
+					ASMOpcode loadOpcode = LoadArrayOpcode(exprList.child(j-1).getType());
+					code.add(PushD, argsLocation);
+					code.add(PushI, offsets[j]);
+					code.add(Add);
+					code.add(loadOpcode);
+				}
+				code.add(PushD, argsLocation);
+				code.add(LoadI);
+				
+			}
+			
+			code.add(Call, MemoryManager.MEM_MANAGER_DIAGNOSTICS);
+			
+			
+		}
+		
+		
+		
 		///////////////////////////////////////////////////////////////////////////
 		// expressions --------Binary operator
 		public void visitLeave(BinaryOperatorNode node) {
