@@ -67,6 +67,7 @@ public class RecordManager {
 		// construct tables for each tuple
 		for(Binding binding: tupleBindings) {
 			TupleType type = (TupleType)binding.getType();
+			System.out.println("typdId: " + type.getTypeId());
 			frag.add(DLabel, type.getAttributeTableLabel());
 			for(Binding attributeBinding: type.getSymbolTable().values()) {
 				if(attributeBinding.getType().isReferenceType()) {
@@ -101,6 +102,8 @@ public class RecordManager {
 		String checkListLoopContinue = "$record-manager-deallocate-chekclist-loop-continue";
 		String checkListLoopEnd = "$record-manager-deallocate-checklist-loop-end";
 		
+		String invalidTypeIDError = "$record-manager-deallocate-invalid-typeId";
+		
 		String deallocateStringLabel = "$record-manager-deallocate-string";
 		String deallocateArrayLabel = "$record-manager-deallocate-array";
 		String deallocateTupleLabel = "$record-manager-deallocate-tuple";
@@ -115,7 +118,7 @@ public class RecordManager {
 		
 		frag.add(Label, DEALLOCATE_CHECKLIST);
 		
-		//Macros.printStack(frag, "before");
+			//Macros.printStack(frag, "before");
 		
 		// loop start
 		frag.add(Label, checkListLoopStart);
@@ -131,7 +134,7 @@ public class RecordManager {
 		frag.add(PushI, 4);
 		frag.add(Multiply);							// record location: tableHead + 4*itr
 		frag.add(Add);
-		frag.add(LoadI);							// [...adr]
+		frag.add(LoadI);							// [...ptr]
 			//Macros.printPtrAndTypeId(frag, "111");
 		// jump to continue if do-not-dispose
 		frag.add(Duplicate);
@@ -160,9 +163,12 @@ public class RecordManager {
 		// jump to tuple deallocation
 		frag.add(Duplicate);
 		frag.add(LoadI);
-		frag.add(PushI, 100);
-		frag.add(JumpNeg, deallocateTupleLabel);
+		frag.add(PushI, 100);		// [...ptr typeId 100]
+		frag.add(Subtract);
+		frag.add(JumpNeg, invalidTypeIDError);
+		frag.add(Jump, deallocateTupleLabel);
 		// gives error if not string, array or tuple
+		frag.add(Label, invalidTypeIDError);
 		frag.add(Call, RunTime.GENERAL_RUNTIME_ERROR); 
 		
 		// deallocate String
@@ -179,11 +185,13 @@ public class RecordManager {
 		
 		// deallocate Tuple
 		frag.add(Label, deallocateTupleLabel);
+			//Macros.printStack(frag, "before deallocate tuple");
 		deallocateTuple(frag, deallocateTupleItrLabel);
+			//Macros.printStack(frag, "after deallocate tuple");
 		frag.add(Jump, checkListLoopContinue);
 		
 		// loop continue
-		frag.add(Label, checkListLoopContinue);		// adr
+		frag.add(Label, checkListLoopContinue);		// ptr
 		frag.add(Pop);								
 		Macros.incrementInteger(frag, ItrLocation);	// [...] itr++
 		frag.add(Jump, checkListLoopStart);
@@ -309,7 +317,9 @@ public class RecordManager {
 		Macros.incrementInteger(frag, itrLabel);
 		frag.add(Jump, attributeLoopStart);
 		
-		frag.add(Label, attributeLoopEnd);	
+		frag.add(Label, attributeLoopEnd);	// [...adr adr -1]
+		frag.add(Pop);
+		frag.add(Pop);
 		
 		// deallocate Record
 		deallocateRecord(frag);

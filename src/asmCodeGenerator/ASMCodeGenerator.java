@@ -1599,8 +1599,10 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			code.append(expr);
+				
+				Macros.printStack(code, "ptr: ");
+			
 			code.add(Call, MemoryManager.MEM_MANAGER_GET_ID);
-			// do something
 		}
 		
 		// expression ------------------- length
