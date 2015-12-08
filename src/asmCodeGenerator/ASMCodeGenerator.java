@@ -236,6 +236,9 @@ public class ASMCodeGenerator {
 			for(ParseNode child : node.getChildren()) {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
+				
+				// deallocate after each statement ends
+				code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
 			}
 
 		}
@@ -244,6 +247,9 @@ public class ASMCodeGenerator {
 			for(ParseNode child: node.getChildren()) {
 				ASMCodeFragment childCode = removeVoidCode(child);
 				code.append(childCode);
+				
+				// deallocate memory when a statements ends( includidng a block)
+				code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
 			}
 			
 			// add codes to decrement refcount of variables in scoope
@@ -698,8 +704,7 @@ public class ASMCodeGenerator {
 			code.add(opcodeForStore(type));
 			addEndLabelIfStaticDeclaration(identifier, endOfDeclarationLabel);
 			
-			// deallocate unused memory
-			code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
+
 		}
 		
 		private void jumpOverIfDeclaredStaticVariable(IdentifierNode identifier, String endLabel) {
@@ -747,8 +752,7 @@ public class ASMCodeGenerator {
 			Type type = node.getType();
 			code.add(opcodeForStore(type));
 			
-			// deallocate unused memory
-			code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
+
 		}
 		private ASMOpcode opcodeForStore(Type type) {
 			if(type == PrimitiveType.INTEGER) {
@@ -890,12 +894,15 @@ public class ASMCodeGenerator {
 				code.add(PushI, 0);
 				code.add(StoreI);			// i = 0
 				code.append(arrayExpr);		// [...arrayStart]
+				// increment refcount of arrayExpr
+				RecordManager.incrementRefcount(code);
 				// load array-length n
 				code.add(Duplicate);		// [...arrayStart arrayStart]
 				code.add(PushI, 13);
 				code.add(Add);
 				code.add(LoadI);			// [...arrayStart n]
 				
+				// loop start
 				code.add(Label, startLoopLabel);
 				code.add(Duplicate);		// [...arrayStart n n]
 				code.add(PushD,itrAdr);
@@ -929,8 +936,9 @@ public class ASMCodeGenerator {
 				code.add(Add);				
 				code.add(StoreI);			// [...arrayStart n]	i++
 				code.add(Jump, startLoopLabel);
-				code.add(Label, endLoopLabel);
-				code.add(Pop);
+				code.add(Label, endLoopLabel);	// [...arrayStart n]
+				code.add(Pop);				// [...arrayStart]
+				RecordManager.decrementRefcount(code);
 				code.add(Pop);
 				
 			} else if(forCtlNode.getToken().isLextant(Keyword.PAIR)) {
@@ -962,8 +970,10 @@ public class ASMCodeGenerator {
 				
 				// put arrayExpr on stack
 				code.append(arrayExpr);
-				code.add(Duplicate);
+				// increment refcount of arrayExpr
+				RecordManager.incrementRefcount(code);
 				// load array length
+				code.add(Duplicate);
 				Macros.readIOffset(code, 13);		// [...arr n]
 				
 				// array start
@@ -1003,8 +1013,10 @@ public class ASMCodeGenerator {
 		        code.add(Exchange);					// [...n arr] => [...arr n]
 				// jump start
 		        code.add(Jump, startLoopLabel);
-				code.add(Label, endLoopLabel);
-				code.add(Pop);
+				code.add(Label, endLoopLabel);		// [...arr n]
+				code.add(Pop);						// [...n arr]
+				// decrement refcount of arrayExpr
+				RecordManager.decrementRefcount(code);
 				code.add(Pop);
 				
 			} else if(forCtlNode.getToken().isLextant(Keyword.INDEX)) {
@@ -1052,6 +1064,8 @@ public class ASMCodeGenerator {
 				ASMCodeFragment lowerBound = null;
 				ASMCodeFragment upperBound = null;
 				
+				String upperBoundLocation = labeller.newLabel("for-loop-count-upperbound-location", "");
+				
 				ASMOpcode JumpOpcode = null;
 				if(forCtlNode.isUpperBoundIncluded())
 					JumpOpcode = JumpNeg;
@@ -1065,6 +1079,10 @@ public class ASMCodeGenerator {
 					lowerBound = removeValueCode(forCtlNode.child(1));
 				}
 				
+				Macros.declareI(code, upperBoundLocation);
+				code.add(PushD, upperBoundLocation);
+				code.append(upperBound);
+				code.add(StoreI);
 				
 				code.append(itrAdr);
 				code.add(Duplicate);
@@ -1082,7 +1100,8 @@ public class ASMCodeGenerator {
 				code.add(Label, startLoopLabel);
 				code.add(Duplicate);		// [...itrAdr]
 				code.add(LoadI);			// [...itrAdr itr]
-				code.append(upperBound);
+				// load upper bound
+				Macros.loadIFrom(code, upperBoundLocation);
 				code.add(Exchange);			// [...itrAdr upperBound itr]
 				code.add(Subtract);
 				code.add(JumpOpcode, endLoopLabel);	// [...itrAdr]
@@ -1874,8 +1893,6 @@ public class ASMCodeGenerator {
 					code.add(PushI, returnTupleType.getBytesNeeded());
 					code.add(Call, MemoryManager.MEM_MANAGER_ALLOCATE);
 					header.addTupleHeader(code, returnTupleType);
-					// add to TO_BE_CHECKED_LIST
-					RecordManager.addToCheckList(code);
 				} else {
 					if(returnType == PrimitiveType.FLOATING) 
 						code.add(PushF, 0.0);
@@ -1885,6 +1902,14 @@ public class ASMCodeGenerator {
 				// store returnVarible to FRAME stack
 				code.add(storeOpcode);
 			}
+			
+			if(returnType.isReferenceType()) {
+				if(returnType instanceof TupleType) 
+					RecordManager.addToCheckList(code);
+				else	// string and array
+					RecordManager.decrementRefcount(code);
+			}
+			
 			// args and returnVar on FrameStack
 			// Stack Pointer adjusted
 			// Call function
