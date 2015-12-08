@@ -39,6 +39,7 @@ public enum Keyword implements Lextant {
 	RETURN("return"),
 	CALL("call"),
 	MAIN("main"),
+	DIAGNOSTIC("diag"),
 	NULL_KEYWORD("");
 
 	private String lexeme;

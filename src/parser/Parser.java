@@ -264,6 +264,9 @@ public class Parser {
 		if(startsCallStatement(nowReading)) {
 			return parseCallStatement();
 		}
+		if(startsDiagnosticStatement(nowReading)) {
+			return parseDiagnosticStatement();
+		}
 		if(startsBlock(nowReading)) {
 			return parseBlock();
 		}
@@ -280,7 +283,8 @@ public class Parser {
 			   startsBlock(token) ||
 			   startsBreakContinue(token) ||
 			   startsReturnStatement(token) ||
-			   startsCallStatement(token);
+			   startsCallStatement(token) ||
+			   startsDiagnosticStatement(token);
 	}
 	
 	// printStmt -> PRINT printExpressionList ;
@@ -610,6 +614,32 @@ public class Parser {
 	
 	private boolean startsCallStatement(Token token) {
 		return token.isLextant(Keyword.CALL);
+	}
+	
+	// diagnostic stmt
+	// diag expr (:: expr1 (,expr)*);
+	public ParseNode parseDiagnosticStatement() {
+		if(!startsDiagnosticStatement(nowReading)) {
+			return syntaxErrorNode("diag stmt");
+		}
+		Token diagToken = nowReading;
+		readToken();
+		DiagnosticStatementNode diagNode = new DiagnosticStatementNode(diagToken);
+		ParseNode expr1 = parseExpression();
+		diagNode.appendChild(expr1);
+		if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
+			Token open_paraToken = nowReading;
+			readToken();
+			expect(Punctuator.DOUBLE_COLON);
+			ParseNode exprList = parseExpressionList(new ExpressionListNode(open_paraToken));
+			diagNode.appendChild(exprList);
+			expect(Punctuator.CLOSE_PARENTHESIS);
+		}
+		expect(Punctuator.TERMINATOR);
+		return diagNode;
+	}
+	private boolean startsDiagnosticStatement(Token token) {
+		return token.isLextant(Keyword.DIAGNOSTIC);
 	}
 	
 	///////////////////////////////////////////////////////////

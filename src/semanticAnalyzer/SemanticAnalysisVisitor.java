@@ -308,6 +308,21 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 	}
 	
 	
+	@Override
+	public void visitLeave(DiagnosticStatementNode node) {
+		if(node.child(0).getType() != PrimitiveType.INTEGER) {
+			logError("Expected Integer in diagnostic statement");
+			node.setType(PrimitiveType.ERROR);
+		}
+		
+		if(node.nChildren() ==2) {
+			if(node.child(1).nChildren() == 0 ) {
+				logError("At least expression in diagnostic statement");
+				node.setType(PrimitiveType.ERROR);
+			}
+		}
+	}
+	
 	///////////////////////////////////////////////////////////////////////////
 	// expressions
 	@Override
