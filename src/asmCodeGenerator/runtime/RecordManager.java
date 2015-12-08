@@ -267,8 +267,9 @@ public class RecordManager {
 	}
 	
 	private static void deallocateTuple(ASMCodeFragment frag, String itrLabel) {
-		String attributeLoopStart = "record-manager-deallocate-tuple-attribute-start";
-		String attributeLoopEnd = "record-manager-deallocate-tuple-attribute-end";
+		String attributeLoopStart = "$$record-manager-deallocate-tuple-attribute-start";
+		String attributeLoopEnd = "$$record-manager-deallocate-tuple-attribute-end";
+		String JumpOverIfSubTypeNotReference = "$$record-manager-deallocate-tuple-subType not reference";
 		
 		// [...adr]
 		
@@ -277,7 +278,7 @@ public class RecordManager {
 		Macros.readIOffset(frag, 4);
 		frag.add(PushI, 2);
 		frag.add(BTAnd);
-		frag.add(JumpFalse, attributeLoopEnd);
+		frag.add(JumpFalse, JumpOverIfSubTypeNotReference);
 		
 		// initialize loop invariant
 		frag.add(PushD, itrLabel);
@@ -321,6 +322,8 @@ public class RecordManager {
 		frag.add(Pop);
 		frag.add(Pop);
 		
+		frag.add(Label, JumpOverIfSubTypeNotReference);
+		
 		// deallocate Record
 		deallocateRecord(frag);
 		
@@ -330,6 +333,9 @@ public class RecordManager {
 	
 	
 	private static void deallocateRecord(ASMCodeFragment frag) {
+		
+		Macros.printStack(frag, "deallocating: ");
+		
 		// [...ptr] -> [...ptr]
 		frag.add(Duplicate);
 		frag.add(Duplicate);

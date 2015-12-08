@@ -258,6 +258,7 @@ public class ASMCodeGenerator {
 			// when leaves the scope
 			Scope localScope = node.getScope();
 			decrementRefcountInScope(code, localScope);
+			code.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
 			
 		}
 		
@@ -273,6 +274,7 @@ public class ASMCodeGenerator {
 				binding.generateAddress(frag);			// [...adr]
 				frag.add(LoadI);						// [...record]
 				RecordManager.decrementRefcount(frag);
+				frag.add(Pop);
 				
 				code.append(frag);
 			}
@@ -865,8 +867,8 @@ public class ASMCodeGenerator {
 			newVoidCode(node);
 			if(forCtlNode.getToken().isLextant(Keyword.EVER)) {
 				code.add(Label, startLoopLabel);			// loop forever
-				code.add(Label, continueLoopLabel);
 				code.append(block);
+				code.add(Label, continueLoopLabel);
 				code.add(Jump, startLoopLabel);
 				code.add(Label, endLoopLabel);
 			} else if(forCtlNode.getToken().isLextant(Keyword.ELEMENT)) {
@@ -978,7 +980,7 @@ public class ASMCodeGenerator {
 				code.add(Duplicate);
 				Macros.readIOffset(code, 13);		// [...arr n]
 				
-				// array start
+				// loop start
 				code.add(Label, startLoopLabel);
 				// if itr == n, jump
 				code.add(Duplicate);				// [...arr n n]
@@ -1680,7 +1682,7 @@ public class ASMCodeGenerator {
 			newValueCode(node);
 			code.append(expr);
 				
-				Macros.printStack(code, "ptr: ");
+				//Macros.printStack(code, "ptr: ");
 			
 			code.add(Call, MemoryManager.MEM_MANAGER_GET_ID);
 		}
@@ -1964,17 +1966,19 @@ public class ASMCodeGenerator {
 				code.add(storeOpcode);
 			}
 			
+			
+			
+			// args and returnVar on FrameStack
+			// Stack Pointer adjusted
+			// Call function
+			code.add(Call, JumpFunctionLabel);
+			
 			if(returnType.isReferenceType()) {
 				if(returnType instanceof TupleType) 
 					RecordManager.addToCheckList(code);
 				else	// string and array
 					RecordManager.decrementRefcount(code);
 			}
-			
-			// args and returnVar on FrameStack
-			// Stack Pointer adjusted
-			// Call function
-			code.add(Call, JumpFunctionLabel);
 
 		}
 			
