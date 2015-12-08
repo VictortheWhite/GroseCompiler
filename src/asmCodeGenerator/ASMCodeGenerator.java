@@ -1,5 +1,6 @@
 package asmCodeGenerator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -222,6 +223,8 @@ public class ASMCodeGenerator {
 					continue;
 				if(child instanceof DeclarationNode) {
 					GlobalVariableDeclaraction.append(removeVoidCode(child));
+					GlobalVariableDeclaraction.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
+					GlobalVariableDeclaraction.add(PStack);
 				}
 				if(child instanceof FunctionDefinitionNode) {
 					code.append(removeVoidCode(child));
@@ -292,7 +295,7 @@ public class ASMCodeGenerator {
 			String returnLabel = funcBinding.getRetureLabel();
 			Scope procedureScope = node.child(3).getScope();
 			
-			
+				System.out.println(node.getScope());
 			int frameSize = procedureScope.getAllocatedSize() + 8;
 			
 			newVoidCode(node);
@@ -338,6 +341,9 @@ public class ASMCodeGenerator {
 			code.add(StoreI);						// [...]
 			
 			
+			// increment refcount of args if reference type
+			incrementRefcountOfArguments(node);
+			
 			//-------------------------------------------
 			// userCode
 			code.append(userCodeBody);
@@ -348,6 +354,10 @@ public class ASMCodeGenerator {
 			// return label
 			code.add(Label, returnLabel);
 			
+			
+			// decrement refcount of args if referenceType
+			decrementRefcountOfArguments(node);
+						
 			// load return address onto ASM Stack
 			// change fp to old fp
 			code.add(PushD, RunTime.FRAME_POINTER);
@@ -421,7 +431,33 @@ public class ASMCodeGenerator {
 
 		}
 		
-
+		private void incrementRefcountOfArguments(FunctionDefinitionNode node) {
+			List<Binding> argBindings = new ArrayList<Binding>(node.getScope().getSymbolTable().values());
+			int argNum = node.child(1).nChildren();
+			for(int i = 0; i < argNum; i++) {
+				Binding binding = argBindings.get(i);
+				if(binding.getType().isReferenceType()) {
+					binding.generateAddress(code);
+					code.add(LoadI);
+					RecordManager.incrementRefcount(code);
+					code.add(Pop);
+				}
+			}
+		}
+		private void decrementRefcountOfArguments(FunctionDefinitionNode node) {
+			List<Binding> argBindings = new ArrayList<Binding>(node.getScope().getSymbolTable().values());
+			int argNum = node.child(1).nChildren();
+			for(int i = 0; i < argNum; i++) {
+				Binding binding = argBindings.get(i);
+				if(binding.getType().isReferenceType()) {
+					binding.generateAddress(code);
+					code.add(LoadI);
+					RecordManager.decrementRefcount(code);
+					code.add(Pop);
+				}
+			}
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// statements and declarations
 

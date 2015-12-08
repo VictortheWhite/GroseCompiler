@@ -144,6 +144,7 @@ public class RecordManager {
 		frag.add(JumpTrue, checkListLoopContinue);
 		// jump to continue if refcount > 0
 			//Macros.printPtrAndRefcount(frag, "refcount");
+			//Macros.printPtrAndTypeId(frag, "shit");
 		frag.add(Duplicate);
 		Macros.readCOffset(frag, 8);
 		frag.add(JumpTrue, checkListLoopContinue);
@@ -334,7 +335,7 @@ public class RecordManager {
 	
 	private static void deallocateRecord(ASMCodeFragment frag) {
 		
-		Macros.printStack(frag, "deallocating: ");
+		//Macros.printStack(frag, "deallocating: ");
 		
 		// [...ptr] -> [...ptr]
 		frag.add(Duplicate);
