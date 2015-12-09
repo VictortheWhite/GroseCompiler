@@ -1910,6 +1910,8 @@ public class ASMCodeGenerator {
 		// expression -----------Array Concatenation
 		public void visitLeave(ArrayConcatenationNode node) {
 			ASMCodeFragment firstArray = removeValueCode(node.child(0));
+			Type subType = (ArrayType)node.getType();
+			
 			
 			newValueCode(node);
 			code.append(firstArray);
@@ -1932,6 +1934,10 @@ public class ASMCodeGenerator {
 								
 				// call array-concatenation-subroutine
 				code.add(Call, RunTime.ARRAY_CONCATENATION);
+				
+				if(subType.isReferenceType()) {
+					incrementRefcountOfArraySubElement();
+				}
 			}
 		}
 		
