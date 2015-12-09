@@ -51,6 +51,7 @@ import parseTree.nodeTypes.TupleEntryNode;
 import parseTree.nodeTypes.UnaryOperatorNode;
 import parseTree.nodeTypes.WhileStatementNode;
 import parseTree.nodeTypes.ReassignmentNode;
+import semanticAnalyzer.SemanticAnalyzer;
 import semanticAnalyzer.types.ArrayType;
 import semanticAnalyzer.types.PrimitiveType;
 import semanticAnalyzer.types.TupleType;
@@ -219,8 +220,9 @@ public class ASMCodeGenerator {
 			ASMCodeFragment GlobalVariableDeclaraction = new ASMCodeFragment(GENERATES_VOID);
 			newVoidCode(node);
 			for(ParseNode child : node.getChildren()) {
-				if(child instanceof TupleDefinitionNode)
-					continue;
+				if(child instanceof TupleDefinitionNode) {
+					code.append(removeVoidCode(child));
+				}
 				if(child instanceof DeclarationNode) {
 					GlobalVariableDeclaraction.append(removeVoidCode(child));
 					GlobalVariableDeclaraction.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
@@ -284,6 +286,83 @@ public class ASMCodeGenerator {
 		
 		
 		//////////////////////////////////////////////////////////////////////////
+		// tuple definition
+		public void visitLeave(TupleDefinitionNode node) {
+			IdentifierNode tupleName = (IdentifierNode)node.child(0);
+			String lexeme = tupleName.getToken().getLexeme();
+			Binding tupleBinding = SemanticAnalyzer.getGlobalScope().getSymbolTable().lookup(lexeme);
+			
+			if(!(tupleBinding.getType() instanceof TupleType)) {
+				return;
+			}
+			
+			newVoidCode(node);
+			addTuplePrintingSubRoutine((TupleType)tupleBinding.getType());
+			
+		}
+		
+		private void addTuplePrintingSubRoutine(TupleType tupleType) {
+			List<Binding> attriBindings = tupleType.getBindings();
+			String endLabel = labeller.newLabel("print-tuple-"+ tupleType.getTupleName(), "end-label");
+			
+			code.add(Label, tupleType.getPrintingSubRoutine());
+						
+
+			// [...R ptr]
+			code.add(Exchange);		// [...R ptr]
+			
+			printNullIfNullPointer(tupleType, endLabel);
+			// print '('
+			code.add(PushI, 40);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);				
+			
+			int i = 0;
+			for(Binding attriBinding: attriBindings) {
+				int offset = attriBinding.getMemoryLocation().getOffset();
+				
+				Type type = attriBinding.getType();
+				ASMOpcode loadOp = LoadArrayOpcode(type);
+							
+				// [...R ptr]
+				code.add(Duplicate);
+				code.add(PushI, offset);
+				code.add(Add);
+				code.add(loadOp);			// [...R ptr attri]
+				if(type instanceof ArrayType)
+					printArray((ArrayType)type);
+				else if(type instanceof TupleType)
+					printTuple((TupleType)type);
+				else
+					printPrimitiveType(type);
+				i++;
+				if(i == tupleType.getLength()) {
+					break;
+				}
+				
+				code.add(PushI, 44);						// print ','
+				code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+				code.add(Printf);
+				code.add(PushI, 32);						// print space
+				code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+				code.add(Printf);
+			}
+			
+			code.add(PushI, 41);
+			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
+			code.add(Printf);							// print ')'
+			
+			
+			
+			// [...R ptr]
+			code.add(Pop);
+			
+			code.add(Label, endLabel);
+			code.add(Return);
+
+		}
+		
+		//////////////////////////////////////////////////////////////////////////
 		// function definition
 		public void visitLeave(FunctionDefinitionNode node) {
 			IdentifierNode funcName = (IdentifierNode)node.child(0);
@@ -297,6 +376,16 @@ public class ASMCodeGenerator {
 			int frameSize = procedureScope.getAllocatedSize() + 8;
 			
 			newVoidCode(node);
+			
+			// add print Tuple Label
+			IdentifierNode tupleName = (IdentifierNode)node.child(0);
+			String lexeme = tupleName.getToken().getLexeme();
+			Binding tupleBinding = SemanticAnalyzer.getGlobalScope().getSymbolTable().lookup(lexeme);
+			if(tupleBinding.getType() instanceof TupleType) {
+				addTuplePrintingSubRoutine((TupleType)tupleBinding.getType());
+			}
+			
+			// function Start
 			code.add(Label, StartLabel);
 			
 			//-------------------------------------------
@@ -588,56 +677,8 @@ public class ASMCodeGenerator {
 			
 		}
 		private void printTuple(TupleType type) {
-			List<Type> subElementTypes = type.getParameterList();
-			String notPrintingLabel = labeller.newLabel("jump-print-null-pointer", "");
-
-			printNullIfNullPointer(type, notPrintingLabel);
-			
-			code.add(PushI, 40);
-			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
-			code.add(Printf);							// print '('
-			
-			// [...adr ]
-			code.add(PushI, 9);
-			code.add(Add);
-			
-			int i = 0;
-			while(i < subElementTypes.size()) {
-				Type subType = subElementTypes.get(i);
-				ASMOpcode loadOpcode = LoadArrayOpcode(subType);
-				
-				code.add(Duplicate);	// [...adr* adr*]
-				code.add(loadOpcode);	// [...adr* ele]
-				if(subType instanceof ArrayType) {
-					printArray((ArrayType)subType);
-				} else if(subType instanceof TupleType) {
-					printTuple((TupleType)subType);
-				}
-				else {
-					printPrimitiveType(subType);
-				}
-				code.add(PushI, subType.getSize());
-				code.add(Add);
-				
-				i++;
-				if(i == subElementTypes.size())
-					break;
-				else {	
-					code.add(PushI, 44);						// print ','
-					code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
-					code.add(Printf);
-					code.add(PushI, 32);						// print space
-					code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
-					code.add(Printf);	
-				}
-			}
-			code.add(Pop);
-			
-			code.add(PushI, 41);
-			code.add(PushD, RunTime.CHARACTER_PRINT_FORMAT);
-			code.add(Printf);							// print ')'
-			
-			code.add(Label, notPrintingLabel);
+			String printSubRoutineLabel = type.getPrintingSubRoutine();
+			code.add(Call, printSubRoutineLabel);
 		}
 		private void convertToStringIfBoolean(Type type) {
 			if(type != PrimitiveType.BOOLEAN) {

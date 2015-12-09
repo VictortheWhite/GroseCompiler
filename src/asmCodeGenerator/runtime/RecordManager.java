@@ -67,7 +67,6 @@ public class RecordManager {
 		// construct tables for each tuple
 		for(Binding binding: tupleBindings) {
 			TupleType type = (TupleType)binding.getType();
-			System.out.println("typdId: " + type.getTypeId());
 			frag.add(DLabel, type.getAttributeTableLabel());
 			for(Binding attributeBinding: type.getSymbolTable().values()) {
 				if(attributeBinding.getType().isReferenceType()) {
@@ -118,14 +117,12 @@ public class RecordManager {
 		
 		frag.add(Label, DEALLOCATE_CHECKLIST);
 		
-			//Macros.printStack(frag, "before");
 		
 		// loop start
 		frag.add(Label, checkListLoopStart);
 		// if size - itr ==0 jump end
 		Macros.loadIFrom(frag, TO_BE_CHECKED_LIST_SIZE);
 		Macros.loadIFrom(frag, ItrLocation);
-			//Macros.printStack(frag, "size-itr-of-checklist-loop");
 		frag.add(Subtract);
 		frag.add(JumpFalse, checkListLoopEnd);		
 		// real looping start
@@ -135,7 +132,6 @@ public class RecordManager {
 		frag.add(Multiply);							// record location: tableHead + 4*itr
 		frag.add(Add);
 		frag.add(LoadI);							// [...ptr]
-			//Macros.printPtrAndTypeId(frag, "111");
 		// jump to continue if do-not-dispose
 		frag.add(Duplicate);
 		Macros.readIOffset(frag, 4);
@@ -143,8 +139,7 @@ public class RecordManager {
 		frag.add(BTAnd);
 		frag.add(JumpTrue, checkListLoopContinue);
 		// jump to continue if refcount > 0
-			//Macros.printPtrAndRefcount(frag, "refcount");
-			//Macros.printPtrAndTypeId(frag, "shit");
+
 		frag.add(Duplicate);
 		Macros.readCOffset(frag, 8);
 		frag.add(JumpTrue, checkListLoopContinue);
@@ -152,7 +147,6 @@ public class RecordManager {
 		frag.add(Duplicate);
 		frag.add(LoadI);							// typeId
 		frag.add(PushI, 10);
-			//Macros.printStack(frag, "typeId - 10");
 		frag.add(Subtract);
 		frag.add(JumpFalse, deallocateStringLabel);
 		// jump to array deallocation
@@ -179,16 +173,12 @@ public class RecordManager {
 		
 		// deallocate Array
 		frag.add(Label, deallocateArrayLabel);
-			//Macros.printStack(frag, "before deallocate array");
 		deallocateArray(frag);
-			//Macros.printStack(frag, "after deallocate array");
 		frag.add(Jump, checkListLoopContinue);
 		
 		// deallocate Tuple
 		frag.add(Label, deallocateTupleLabel);
-			//Macros.printStack(frag, "before deallocate tuple");
 		deallocateTuple(frag, deallocateTupleItrLabel);
-			//Macros.printStack(frag, "after deallocate tuple");
 		frag.add(Jump, checkListLoopContinue);
 		
 		// loop continue
@@ -205,7 +195,6 @@ public class RecordManager {
 		frag.add(PushI, 0);
 		Macros.storeITo(frag, ItrLocation);
 		
-				//Macros.printStack(frag, "after");
 		frag.add(Return);
 		
 		return frag;
@@ -334,9 +323,7 @@ public class RecordManager {
 	
 	
 	private static void deallocateRecord(ASMCodeFragment frag) {
-		
-		Macros.printStack(frag, "deallocating: ");
-		
+				
 		// [...ptr] -> [...ptr]
 		frag.add(Duplicate);
 		frag.add(Duplicate);
@@ -448,8 +435,6 @@ public class RecordManager {
 		// increment size by 1
 		Macros.incrementInteger(code, TO_BE_CHECKED_LIST_SIZE);
 		
-		//Macros.printPtrAndRefcount(code, "add-to-list");
-		//Macros.printPtrAndTypeId(code, "add-to-list");
 	}
 	
 	

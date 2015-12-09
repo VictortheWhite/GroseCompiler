@@ -18,6 +18,7 @@ public class TupleType implements Type{
 	private SymbolTable symbolTable;					// SymbolTable of tuple sub-Elements if defined by parameterList
 	private TupleType refferedType;						// Name of reffered tuple if defined by another tuple
 	private String tupleAttributeTable;
+	private String printSubRoutine;
 	private int typeId;
 	
 	private static int TypeIdCount = 100;
@@ -28,8 +29,10 @@ public class TupleType implements Type{
 		this.symbolTable = null;
 		this.refferedType = null;
 		this.typeId = -1;
-		this.tupleAttributeTable = "tuple-" + this.TupleName 
+		this.tupleAttributeTable = "$$tuple-" + this.TupleName 
 									+ "-attributeTable";
+		this.printSubRoutine = "$$tuple-printing-" + this.TupleName
+									+ "sub-routine";
 	}
 	
 	
@@ -225,6 +228,9 @@ public class TupleType implements Type{
 		return this.tupleAttributeTable;
 	}
 	
+	public String getPrintingSubRoutine() {
+		return this.printSubRoutine;
+	}
 	////////////////////////////////////////////////////////////
 	// error logging
 	public void CircledTupleDefinitionError() {
@@ -240,6 +246,10 @@ public class TupleType implements Type{
 	
 	public int getSize() {
 		return 4;
+	}
+	
+	public String getTupleName() {
+		return this.TupleName;
 	}
 	
 	public String infoString() {
