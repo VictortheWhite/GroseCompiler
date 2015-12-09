@@ -1705,6 +1705,7 @@ public class ASMCodeGenerator {
 			ASMCodeFragment expr = removeValueCode(node.child(0));
 			String ptrNotNullLabel = labeller.newLabel("reference-count-operator-ptr-not-null", "");
 			String refCountEndLabel = labeller.newLabelSameNumber("reference-count-operator-end", "");
+			String DisposbalLabel = labeller.newLabelSameNumber("reference-count-operator-ptr-disaposbal", "");
 			
 			newValueCode(node);
 			code.append(expr);
@@ -1717,6 +1718,18 @@ public class ASMCodeGenerator {
 			code.add(Jump, refCountEndLabel);
 			
 			code.add(Label, ptrNotNullLabel);
+			
+			// if not diposable, INT_MAX(2147483647)
+			code.add(Duplicate);
+			Macros.readIOffset(code, 4);
+			code.add(PushI, 4);
+			code.add(BTAnd);	// [...ptr do-not-dispose]
+			code.add(JumpFalse, DisposbalLabel);
+			code.add(Pop);
+			code.add(PushI, 2147483647);
+			code.add(Jump, refCountEndLabel);
+			
+			code.add(Label, DisposbalLabel);
 			Macros.readCOffset(code, 8);
 			
 			// end label
