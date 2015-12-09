@@ -1388,7 +1388,14 @@ public class ASMCodeGenerator {
 			ASMCodeFragment arg2 = removeValueCode(node.child(1));	
 			
 			code.append(arg1);									// [...arg1]
+			// runtime error if null
+			code.add(Duplicate);
+			code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
+			
 			code.append(arg2);									// [...arg1 arg2]
+			// runtime error if null
+			code.add(Duplicate);
+			code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
 
 			code.add(PushD, RunTime.STRING_CONCA_ARG2);			// [...arg1 arg2 arg2_addr]
 			code.add(Exchange); 								// [...arg1 arg2_addr arg2]
@@ -1517,6 +1524,11 @@ public class ASMCodeGenerator {
 			ASMCodeFragment index = removeValueCode(node.child(1));
 			
 			code.append(array);						// [...adr]
+			
+			// runtime error if null
+			code.add(Duplicate);
+			code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
+			
 			code.add(Duplicate);
 			code.add(PushI, 13);
 			code.add(Add);
@@ -1547,6 +1559,10 @@ public class ASMCodeGenerator {
 			
 			newAddressCode(node);
 			code.append(tupleVarAdr);
+			// runtime error if null
+			code.add(Duplicate);
+			code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
+			
 			code.append(subElement);
 			code.add(Add);
 		}
@@ -1856,8 +1872,17 @@ public class ASMCodeGenerator {
 			
 			newValueCode(node);
 			code.append(firstArray);
+			// runtime error if null
+			code.add(Duplicate);
+			code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
+			
 			for(int i = 1; i < node.nChildren(); i++) {
 				// store arg1
+				
+				// runtime error if null
+				code.add(Duplicate);
+				code.add(JumpFalse, RunTime.NULL_POINTER_EXCEPTION_ERROR);
+				
 				// [...arg1]
 				Macros.storeITo(code, RunTime.ARRAY_CONCA_ARG1);
 				// store arg2

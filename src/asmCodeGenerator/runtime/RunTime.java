@@ -45,6 +45,7 @@ public class RunTime {
 	public static final String FLOATING_DIVIDE_BY_ZERO_RUNTIME_ERROR = "$$f-divide-by-zero";
 	public static final String ARRAY_INDEXING_OUT_BOUND_ERROR = "$$array-indexing-index-out-bound";
 	public static final String ARRAY_EMPTY_CREATION_SIZE_NEGATIVE_ERROR ="$$array-negative-size-creation";
+	public static final String NULL_POINTER_EXCEPTION_ERROR = "$$null-ptr-exception";
 
 	private ASMCodeFragment environmentASM() {
 		ASMCodeFragment result = new ASMCodeFragment(GENERATES_VOID);
@@ -617,6 +618,7 @@ public class RunTime {
 		floatingDivideByZeroError(frag);
 		arrayIndexingOutBoundError(frag);
 		arrayNegativeSizeCreationError(frag);
+		nullPointerExceptionError(frag);
 		
 		return frag;
 	}
@@ -674,6 +676,17 @@ public class RunTime {
 		frag.add(Jump, GENERAL_RUNTIME_ERROR);
 	}
 
+	private void nullPointerExceptionError(ASMCodeFragment frag) {
+		String nullPtrExceptionError = "$null-pointer-expection-error-string";
+		
+		frag.add(DLabel, nullPtrExceptionError);
+		frag.add(DataS, "null pointer exception");
+		
+		frag.add(Label, NULL_POINTER_EXCEPTION_ERROR);
+		frag.add(PushD, nullPtrExceptionError);
+		frag.add(Jump, GENERAL_RUNTIME_ERROR);
+	}
+	
 	public static ASMCodeFragment getEnvironment() {
 		RunTime rt = new RunTime();
 		return rt.environmentASM();
