@@ -335,7 +335,7 @@ public class RecordManager {
 	
 	private static void deallocateRecord(ASMCodeFragment frag) {
 		
-		//Macros.printStack(frag, "deallocating: ");
+		Macros.printStack(frag, "deallocating: ");
 		
 		// [...ptr] -> [...ptr]
 		frag.add(Duplicate);

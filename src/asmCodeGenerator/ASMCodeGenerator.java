@@ -295,7 +295,6 @@ public class ASMCodeGenerator {
 			String returnLabel = funcBinding.getRetureLabel();
 			Scope procedureScope = node.child(3).getScope();
 			
-				System.out.println(node.getScope());
 			int frameSize = procedureScope.getAllocatedSize() + 8;
 			
 			newVoidCode(node);
@@ -1054,7 +1053,7 @@ public class ASMCodeGenerator {
 				// jump start
 		        code.add(Jump, startLoopLabel);
 				code.add(Label, endLoopLabel);		// [...arr n]
-				code.add(Pop);						// [...n arr]
+				code.add(Pop);						// [...arr]
 				// decrement refcount of arrayExpr
 				RecordManager.decrementRefcount(code);
 				code.add(Pop);
@@ -2070,13 +2069,47 @@ public class ASMCodeGenerator {
 				Scope localScope = current.getScope();
 				decrementRefcountInScope(code, localScope);
 			}
-			
 			code.add(Jump, node.getJumpLabel());
 		}
 		public void visit(FunctionReturnNode node) {
 			newVoidCode(node);
 			String returnLabel = node.getReturnLabel();
+			
+			// decrement refcount of scopes it jumps out
+			for(ParseNode current : node.pathToRoot()) {
+				if(current instanceof FunctionDefinitionNode) {
+					break;
+				}
+				if(!current.hasScope()) {
+					continue;
+				}
+				if(current instanceof ForStatementNode) {
+					decrementRefcountOfForLoopArrayExpr((ForStatementNode)current);
+				} else {
+					assert current instanceof BlockNode;
+					decrementRefcountInScope(code, current.getScope());
+				}
+			}
+
 			code.add(Jump, returnLabel);
+		}
+		private void decrementRefcountOfForLoopArrayExpr(ForStatementNode node) {
+			ParseNode forCtlNode = node.child(0);
+			if(forCtlNode.getToken().isLextant(Keyword.INDEX)) {
+				code.add(PStack);
+				code.add(Pop);
+			}
+			if(forCtlNode.getToken().isLextant(Keyword.ELEMENT)) {
+				code.add(Pop);				// [...arrayStart]
+				RecordManager.decrementRefcount(code);
+				code.add(Pop);
+			}
+			if(forCtlNode.getToken().isLextant(Keyword.PAIR)) {
+				code.add(Exchange);
+				code.add(Pop);				// [...arrayStart]
+				RecordManager.decrementRefcount(code);
+				code.add(Pop);
+			}
 		}
 	}
 
