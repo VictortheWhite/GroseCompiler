@@ -224,7 +224,6 @@ public class ASMCodeGenerator {
 				if(child instanceof DeclarationNode) {
 					GlobalVariableDeclaraction.append(removeVoidCode(child));
 					GlobalVariableDeclaraction.add(Call, RecordManager.DEALLOCATE_CHECKLIST);
-					GlobalVariableDeclaraction.add(PStack);
 				}
 				if(child instanceof FunctionDefinitionNode) {
 					code.append(removeVoidCode(child));
@@ -2080,12 +2079,15 @@ public class ASMCodeGenerator {
 				if(current instanceof FunctionDefinitionNode) {
 					break;
 				}
+				
 				if(!current.hasScope()) {
 					continue;
 				}
+				
 				if(current instanceof ForStatementNode) {
 					decrementRefcountOfForLoopArrayExpr((ForStatementNode)current);
-				} else {
+				} 
+				else {
 					assert current instanceof BlockNode;
 					decrementRefcountInScope(code, current.getScope());
 				}
@@ -2096,7 +2098,6 @@ public class ASMCodeGenerator {
 		private void decrementRefcountOfForLoopArrayExpr(ForStatementNode node) {
 			ParseNode forCtlNode = node.child(0);
 			if(forCtlNode.getToken().isLextant(Keyword.INDEX)) {
-				code.add(PStack);
 				code.add(Pop);
 			}
 			if(forCtlNode.getToken().isLextant(Keyword.ELEMENT)) {
