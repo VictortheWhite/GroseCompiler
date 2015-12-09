@@ -1703,28 +1703,56 @@ public class ASMCodeGenerator {
 		private void visitReferenceCountNode(UnaryOperatorNode node, Lextant operator) {
 			assert operator == Punctuator.SHARP;
 			ASMCodeFragment expr = removeValueCode(node.child(0));
+			String ptrNotNullLabel = labeller.newLabel("reference-count-operator-ptr-not-null", "");
+			String refCountEndLabel = labeller.newLabelSameNumber("reference-count-operator-end", "");
 			
 			newValueCode(node);
 			code.append(expr);
+			
+			// deal with null pointer
+			code.add(Duplicate);
+			code.add(JumpTrue, ptrNotNullLabel);
+			code.add(Pop);
+			code.add(PushI, -1);
+			code.add(Jump, refCountEndLabel);
+			
+			code.add(Label, ptrNotNullLabel);
 			Macros.readCOffset(code, 8);
+			
+			// end label
+			code.add(Label, refCountEndLabel);
 		}
 
 		private void visitRecordNumberNode(UnaryOperatorNode node, Lextant operator) {
 			assert operator == Punctuator.DOLLERSIGN;
 			ASMCodeFragment expr = removeValueCode(node.child(0));
+			String ptrNotNullLabel = labeller.newLabel("record-number-operator-ptr-not-null", "");
+			String recordNumberEndLabel = labeller.newLabelSameNumber("record-number-operator-end", "");
+			
 			
 			newValueCode(node);
 			code.append(expr);
-				
-				//Macros.printStack(code, "ptr: ");
 			
+			// deal with null pointer
+			code.add(Duplicate);
+			code.add(JumpTrue, ptrNotNullLabel);
+			code.add(Pop);
+			code.add(PushI, -1);
+			code.add(Jump, recordNumberEndLabel);
+			
+			
+			code.add(Label, ptrNotNullLabel);
 			code.add(Call, MemoryManager.MEM_MANAGER_GET_ID);
+			
+			code.add(Label, recordNumberEndLabel);
 		}
 		
 		// expression ------------------- length
 		public void visitLeave(LengthOperatorNode node) {
 			ASMCodeFragment arg1 = removeValueCode(node.child(0));
 			
+			String notNullLabel = labeller.newLabel("length-of-operator-not-null", "");
+			String lengthEndLabel = labeller.newLabelSameNumber("length-of-operator-end", "");
 			
 			int offset;
 			if(node.child(0).getType() instanceof ArrayType) {
@@ -1732,19 +1760,30 @@ public class ASMCodeGenerator {
 			} else {
 				offset = 9;
 			}
+			
 			newValueCode(node);
 			
+			code.append(arg1);
+			// judge whether ptr if null
+			code.add(Duplicate);
+			code.add(JumpTrue, notNullLabel);
+			code.add(Pop);		// [...]
+			code.add(PushI, -1);
+			code.add(Jump, lengthEndLabel);
+			
+			code.add(Label, notNullLabel);
 			if(node.child(0).getType() instanceof TupleType) {
 				TupleType childType = (TupleType)node.child(0).getType();
+				code.add(Pop);
 				code.add(PushI, childType.getLength());
 				return;
-			}
-
-			
-			code.append(arg1);
+			}		
 			code.add(PushI, offset);
 			code.add(Add);
 			code.add(LoadI);
+			
+			// end
+			code.add(Label, lengthEndLabel);
 		}
 		
 		// expression -----------Populated Array Creation
