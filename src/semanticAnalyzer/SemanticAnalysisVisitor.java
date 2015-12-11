@@ -315,6 +315,13 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 		
+		if(node.nChildren() == 2) {
+			if(node.child(1).nChildren() < 1) {
+				logError("At least expr in diag exprList");
+				node.setType(PrimitiveType.ERROR);
+			}
+		}
+		
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
