@@ -627,13 +627,11 @@ public class Parser {
 		DiagnosticStatementNode diagNode = new DiagnosticStatementNode(diagToken);
 		ParseNode expr1 = parseExpression();
 		diagNode.appendChild(expr1);
-		if(nowReading.isLextant(Punctuator.OPEN_PARENTHESIS)) {
-			Token open_paraToken = nowReading;
+		if(nowReading.isLextant(Punctuator.DOUBLE_COLON)) {
+			Token double_colon = nowReading;
 			readToken();
-			expect(Punctuator.DOUBLE_COLON);
-			ParseNode exprList = parseExpressionList(new ExpressionListNode(open_paraToken));
+			ParseNode exprList = parseExpressionList(new ExpressionListNode(double_colon));
 			diagNode.appendChild(exprList);
-			expect(Punctuator.CLOSE_PARENTHESIS);
 		}
 		expect(Punctuator.TERMINATOR);
 		return diagNode;

@@ -315,12 +315,6 @@ public class SemanticAnalysisVisitor extends ParseNodeVisitor.Default {
 			node.setType(PrimitiveType.ERROR);
 		}
 		
-		if(node.nChildren() ==2) {
-			if(node.child(1).nChildren() == 0 ) {
-				logError("At least expression in diagnostic statement");
-				node.setType(PrimitiveType.ERROR);
-			}
-		}
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
